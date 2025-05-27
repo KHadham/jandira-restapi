@@ -10,6 +10,7 @@ import {
   Patch,
   Delete,
   SerializeOptions,
+  Query, // Import Query
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -57,6 +58,114 @@ export class AuthController {
     @Body() confirmEmailDto: AuthConfirmEmailDto,
   ): Promise<void> {
     return this.service.confirmEmail(confirmEmailDto.hash);
+  }
+
+  @Get('whatsapp/confirm')
+  @HttpCode(HttpStatus.OK) // Changed to HttpStatus.OK
+  async whatsappConfirm(@Query('token') token: string): Promise<string> {
+    try {
+      await this.service.confirmWhatsapp(token);
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Account Verified</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              background-color: #f4f4f4;
+            }
+            .container {
+              background-color: #fff;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              text-align: center;
+            }
+            h1 {
+              color: #28a745;
+              margin-bottom: 20px;
+            }
+            .success-image {
+              max-width: 150px;
+              height: auto;
+              margin-bottom: 20px;
+            }
+            p {
+              color: #555;
+              font-size: 1em;
+              margin-bottom: 15px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Account Successfully Verified!</h1>
+            <img src="../../files/logo.png" alt="Success" class="success-image">
+            <p>You can now close this window and log in to your account.</p>
+          </div>
+        </body>
+        </html>
+      `;
+    } catch (error) {
+      console.error('WhatsApp verification error:', error);
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Verification Failed</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              background-color: #f4f4f4;
+            }
+            .container {
+              background-color: #fff;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              text-align: center;
+            }
+            h1 {
+              color: #dc3545;
+              margin-bottom: 20px;
+            }
+            p {
+              color: #555;
+              font-size: 1em;
+              margin-bottom: 15px;
+            }
+              .success-image {
+              max-width: 150px;
+              height: auto;
+              margin-bottom: 20px;
+            }
+          </style>
+        </head>
+       <body>
+          <div class="container">
+            <h1>Account Verification Failed!</h1>
+            <img src="../../files/logo.png" alt="Success" class="success-image">
+            <p>Token not found or Account maybe already verified.</p>
+          </div>
+        </body>
+        </html>
+      `;
+    }
   }
 
   @Post('email/confirm/new')

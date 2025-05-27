@@ -28,6 +28,7 @@ import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -197,6 +198,7 @@ export class AuthService {
     const user = await this.usersService.create({
       ...dto,
       email: dto.email,
+      phone: dto.phone, // Save the phone number to the user object
       role: {
         id: RoleEnum.user,
       },
@@ -219,12 +221,27 @@ export class AuthService {
       },
     );
 
-    await this.mailService.userSignUp({
-      to: dto.email,
-      data: {
-        hash,
-      },
-    });
+    const whatsappApiUrl = 'https://api.fonnte.com/send';
+    const whatsappToken = 'LtU9dVY5WhDA644JY74T'; // Assuming you'll store the token in your config
+    const targetPhoneNumber = dto.phone; // Use the phone number from the DTO
+    const verificationUrl = `10.77.61.76:3000/api/v1/auth/whatsapp/confirm?token=${hash}`;
+
+    try {
+      await axios.get(
+        `${whatsappApiUrl}?token=${whatsappToken}&target=${targetPhoneNumber}&message=${verificationUrl}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      // Log the success or handle it as needed
+      console.log(`WhatsApp verification sent to ${targetPhoneNumber}`);
+      // You might want to update the user's status or save the verification token
+    } catch (error) {
+      console.error('Error sending WhatsApp message:', error);
+      // Handle the error appropriately (e.g., throw an exception)
+    }
   }
 
   async confirmEmail(hash: string): Promise<void> {
@@ -588,6 +605,50 @@ export class AuthService {
       token,
       refreshToken,
       tokenExpires,
+    };
+  }
+
+  async confirmWhatsapp(token: string): Promise<{ message: string }> {
+    let userId: User['id'];
+    try {
+      const jwtData = await this.jwtService.verifyAsync<{
+        confirmEmailUserId: User['id'];
+      }>(token, {
+        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
+          infer: true,
+        }),
+      });
+
+      userId = jwtData.confirmEmailUserId;
+    } catch {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          token: `invalidToken`,
+        },
+      });
+    }
+
+    const user = await this.usersService.findById(userId);
+
+    if (
+      !user ||
+      user?.status?.id?.toString() !== StatusEnum.inactive.toString()
+    ) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND,
+        error: `Verification code not found or already verified.`,
+      });
+    }
+
+    user.status = {
+      id: StatusEnum.active,
+    };
+
+    await this.usersService.update(user.id, user);
+
+    return {
+      message: 'Account successfully verified.',
     };
   }
 }

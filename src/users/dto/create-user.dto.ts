@@ -9,6 +9,7 @@ import {
   IsEmail,
   IsNotEmpty,
   IsOptional,
+  IsPhoneNumber,
   MinLength,
 } from 'class-validator';
 import { FileDto } from '../../files/dto/file.dto';
@@ -38,6 +39,11 @@ export class CreateUserDto {
   @ApiProperty({ example: 'Doe', type: String })
   @IsNotEmpty()
   lastName: string | null;
+
+  @ApiProperty({ example: '081234567890' })
+  @IsNotEmpty()
+  @IsPhoneNumber('ID') // You can specify region if needed, e.g., @IsPhoneNumber('ID')
+  phone?: string | null; // Added the phone property
 
   @ApiPropertyOptional({ type: () => FileDto })
   @IsOptional()

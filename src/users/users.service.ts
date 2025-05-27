@@ -54,6 +54,23 @@ export class UsersService {
       email = createUserDto.email;
     }
 
+    // Add phone number handling
+    let phone: string | null = null;
+    if (createUserDto.phone) {
+      const userObject = await this.usersRepository.findByPhone(
+        createUserDto.phone,
+      );
+      if (userObject) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            phone: 'phoneAlreadyExists',
+          },
+        });
+      }
+      phone = createUserDto.phone;
+    }
+
     let photo: FileType | null | undefined = undefined;
 
     if (createUserDto.photo?.id) {
@@ -119,6 +136,7 @@ export class UsersService {
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
       email: email,
+      phone: phone, // Save the phone number
       password: password,
       photo: photo,
       role: role,
