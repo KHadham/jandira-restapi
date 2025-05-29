@@ -1,30 +1,20 @@
-import {
-  // decorators here
-  Transform,
-  Type,
-} from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  // decorators here
-  IsEmail,
-  IsNotEmpty,
-  IsOptional,
-  IsPhoneNumber,
-  MinLength,
-} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsPhoneNumber, MinLength } from 'class-validator';
 import { FileDto } from '../../files/dto/file.dto';
 import { RoleDto } from '../../roles/dto/role.dto';
 import { StatusDto } from '../../statuses/dto/status.dto';
 import { lowerCaseTransformer } from '../../utils/transformers/lower-case.transformer';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'test1@example.com', type: String })
+  @ApiPropertyOptional({ example: 'test1@example.com', type: String })
   @Transform(lowerCaseTransformer)
-  @IsNotEmpty()
+  @IsOptional()
   @IsEmail()
-  email: string | null;
+  email?: string | null;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @MinLength(6)
   password?: string;
 
@@ -32,18 +22,18 @@ export class CreateUserDto {
 
   socialId?: string | null;
 
-  @ApiProperty({ example: 'John', type: String })
-  @IsNotEmpty()
-  firstName: string | null;
+  @ApiPropertyOptional({ example: 'John', type: String })
+  @IsOptional()
+  firstName?: string | null;
 
-  @ApiProperty({ example: 'Doe', type: String })
-  @IsNotEmpty()
-  lastName: string | null;
+  @ApiPropertyOptional({ example: 'Doe', type: String })
+  @IsOptional()
+  lastName?: string | null;
 
-  @ApiProperty({ example: '081234567890' })
-  @IsNotEmpty()
-  @IsPhoneNumber('ID') // You can specify region if needed, e.g., @IsPhoneNumber('ID')
-  phone?: string | null; // Added the phone property
+  @ApiPropertyOptional({ example: '081234567890' }) // Use ApiPropertyOptional
+  @IsOptional() // Add IsOptional
+  @IsPhoneNumber('ID') // Keep the validation for when it IS provided
+  phone?: string | null; // Make it optional with '?'
 
   @ApiPropertyOptional({ type: () => FileDto })
   @IsOptional()

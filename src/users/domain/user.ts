@@ -40,13 +40,13 @@ export class User {
     type: String,
     example: 'John',
   })
-  firstName: string | null;
+  firstName?: string | null;
 
   @ApiProperty({
     type: String,
     example: 'Doe',
   })
-  lastName: string | null;
+  lastName?: string | null;
 
   @ApiProperty({
     type: String,

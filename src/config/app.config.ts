@@ -4,6 +4,7 @@ import validateConfig from '.././utils/validate-config';
 import {
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
@@ -47,6 +48,10 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   APP_HEADER_LANGUAGE: string;
+
+  @IsString() // <--- ADD VALIDATOR
+  @IsNotEmpty()
+  FONTEE_TOKEN: string;
 }
 
 export default registerAs<AppConfig>('app', () => {
@@ -66,5 +71,6 @@ export default registerAs<AppConfig>('app', () => {
     apiPrefix: process.env.API_PREFIX || 'api',
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || 'en',
     headerLanguage: process.env.APP_HEADER_LANGUAGE || 'x-custom-lang',
+    fonnteToken: process.env.FONTEE_TOKEN as string,
   };
 });

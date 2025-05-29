@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   HttpStatus,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -29,16 +31,133 @@ import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import axios from 'axios';
+import { REDIS_CLIENT } from '../redis/redis.module';
+import Redis from 'ioredis';
+import { AuthPhoneOtpRequestDto } from './dto/auth-phone-otp-request.dto';
+import { AuthPhoneOtpVerifyDto } from './dto/auth-phone-otp-verify.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private jwtService: JwtService,
     private usersService: UsersService,
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
   ) {}
+
+  private generateOtp(length: number): string {
+    return crypto
+      .randomInt(0, Math.pow(10, length))
+      .toString()
+      .padStart(length, '0');
+  }
+
+  private getOtpKey(phone: string): string {
+    return `otp:${phone}`;
+  }
+
+  async storeOtp(phone: string, fullName?: string | null): Promise<string> {
+    const otpLength =
+      this.configService.get('redis.otpLength', { infer: true }) || 6;
+    const expiresIn =
+      this.configService.get('redis.otpExpiresInSeconds', { infer: true }) ||
+      300;
+    const otp = this.generateOtp(otpLength);
+    const key = this.getOtpKey(phone);
+
+    // Store OTP and potentially fullName
+    const dataToStore = {
+      otp: otp,
+      fullName: fullName, // Will be null if user exists or not provided
+    };
+
+    await this.redis.set(key, JSON.stringify(dataToStore), 'EX', expiresIn);
+    return otp;
+  }
+
+  async verifyOtp(
+    phone: string,
+    otpToVerify: string,
+  ): Promise<{ otp: string; fullName: string | null }> {
+    const key = this.getOtpKey(phone);
+    const storedDataString = await this.redis.get(key);
+
+    if (!storedDataString) {
+      throw new UnprocessableEntityException('OTP expired or not found.');
+    }
+
+    const storedData = JSON.parse(storedDataString) as {
+      otp: string;
+      fullName: string | null;
+    };
+
+    if (storedData.otp !== otpToVerify) {
+      throw new UnprocessableEntityException('Invalid OTP.');
+    }
+
+    await this.redis.del(key); // Delete after successful verification
+    return storedData;
+  }
+
+  async sendOtpViaWhatsApp(phone: string, otp: string): Promise<void> {
+    // Correctly get the Fonnte token
+    const fonnteToken = this.configService.get('app.fonnteToken', {
+      infer: true,
+    });
+    if (!fonnteToken) {
+      console.error('FONTEE_TOKEN is not set in environment variables.');
+      throw new Error('OTP sending service is not configured.');
+    }
+    const message = `Your verification code is: ${otp}. Do not share it with anyone.`;
+
+    try {
+      console.log(`Sending OTP ${otp} to ${phone} via WhatsApp (Fonnte)`);
+      // Ensure you have axios installed (npm install axios) or use another HTTP client
+      await axios.get(
+        `https://api.fonnte.com/send?token=${fonnteToken}&target=${phone}&message=${message}`,
+      );
+    } catch (error) {
+      console.error(`Failed to send OTP to ${phone}:`, error);
+      throw new Error('Failed to send OTP.');
+    }
+  }
+
+  async requestOtp(dto: AuthPhoneOtpRequestDto): Promise<void> {
+    const { phone, fullName } = dto;
+
+    let user: User | null;
+    try {
+      // We need a findByPhone method in UsersService (Step 5)
+      user = await this.usersService.findByPhone(phone);
+    } catch (error) {
+      // Assume NotFoundException means user doesn't exist
+      if (error instanceof NotFoundException) {
+        user = null;
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
+
+    let nameToStore: string | null = null;
+
+    if (!user) {
+      // User doesn't exist - this is a registration attempt.
+      if (!fullName) {
+        throw new BadRequestException(
+          'Full name is required for registration.',
+        );
+      }
+      nameToStore = fullName;
+    }
+
+    // Store OTP (and fullName if it's a new user)
+    const otp = await this.storeOtp(phone, nameToStore);
+
+    // Send OTP via WhatsApp (or SMS)
+    await this.sendOtpViaWhatsApp(phone, otp);
+  }
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
     const user = await this.usersService.findByEmail(loginDto.email);
@@ -222,7 +341,13 @@ export class AuthService {
     );
 
     const whatsappApiUrl = 'https://api.fonnte.com/send';
-    const whatsappToken = 'LtU9dVY5WhDA644JY74T'; // Assuming you'll store the token in your config
+    const whatsappToken = this.configService.get('app.fonnteToken', {
+      infer: true,
+    });
+    if (!whatsappToken) {
+      console.error('FONTEE_TOKEN is not set in environment variables.');
+      throw new Error('WhatsApp sending service is not configured.');
+    }
     const targetPhoneNumber = dto.phone; // Use the phone number from the DTO
     const verificationUrl = `10.77.61.76:3000/api/v1/auth/whatsapp/confirm?token=${hash}`;
 
@@ -242,6 +367,99 @@ export class AuthService {
       console.error('Error sending WhatsApp message:', error);
       // Handle the error appropriately (e.g., throw an exception)
     }
+  }
+
+  private splitFullName(fullName: string): {
+    firstName: string | null;
+    lastName: string | null;
+  } {
+    const parts = fullName.trim().split(' ');
+    const firstName = parts.length > 0 ? parts[0] : null;
+    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : null;
+    return { firstName, lastName };
+  }
+
+  private async generateTokens(user: User): Promise<LoginResponseDto> {
+    const [token, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        {
+          id: user.id,
+          role: user.role,
+          sessionId: 'dummy-session-id', // We might need real session handling later
+        },
+        {
+          secret: this.configService.get('auth.secret', { infer: true }),
+          expiresIn: this.configService.get('auth.expires', { infer: true }),
+        },
+      ),
+      this.jwtService.signAsync(
+        {
+          sessionId: 'dummy-session-id', // We might need real session handling later
+        },
+        {
+          secret: this.configService.get('auth.refreshSecret', { infer: true }),
+          expiresIn: this.configService.get('auth.refreshExpires', {
+            infer: true,
+          }),
+        },
+      ),
+    ]);
+
+    return {
+      token,
+      refreshToken,
+      tokenExpires: this.configService.get('auth.expires', {
+        infer: true,
+      }) as number,
+      user,
+    };
+  }
+
+  async verifyOtpAndLogin(
+    dto: AuthPhoneOtpVerifyDto,
+  ): Promise<LoginResponseDto> {
+    const { phone, otp } = dto;
+
+    // Verify OTP and get stored data (including potential fullName)
+    const storedData = await this.verifyOtp(phone, otp);
+
+    let user: User | null = null;
+
+    if (storedData.fullName) {
+      // This was a registration - create the user
+      const { firstName, lastName } = this.splitFullName(storedData.fullName);
+
+      user = await this.usersService.create({
+        phone: phone,
+        firstName: firstName,
+        lastName: lastName,
+        email: null, // No email in this flow
+        password: undefined, // No password in this flow
+        provider: AuthProvidersEnum.otp, // We should add 'OTP' to AuthProvidersEnum
+        role: { id: RoleEnum.user } as any, // Assign default user role
+        status: { id: StatusEnum.active } as any, // Set as active immediately
+      });
+    } else {
+      // User should already exist - find them
+      try {
+        user = await this.usersService.findByPhone(phone);
+      } catch (error) {
+        // This shouldn't happen if the logic is correct, but handle it
+        console.error('Error finding user after OTP verify:', error);
+        throw new UnprocessableEntityException(
+          'Could not process login after OTP verification.',
+        );
+      }
+    }
+
+    if (!user) {
+      throw new UnprocessableEntityException(
+        'User could not be found or created.',
+      );
+    }
+
+    // Generate and return JWTs
+    return this.generateTokens(user);
   }
 
   async confirmEmail(hash: string): Promise<void> {

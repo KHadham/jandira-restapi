@@ -15,6 +15,7 @@ export class UserMapper {
     domainEntity.socialId = raw.socialId;
     domainEntity.firstName = raw.firstName;
     domainEntity.lastName = raw.lastName;
+    domainEntity.phone = raw.phone;
     if (raw.photo) {
       domainEntity.photo = FileMapper.toDomain(raw.photo);
     }

@@ -25,6 +25,8 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { AuthPhoneOtpRequestDto } from './dto/auth-phone-otp-request.dto';
+import { AuthPhoneOtpVerifyDto } from './dto/auth-phone-otp-verify.dto';
 
 @ApiTags('Auth')
 @Controller({
@@ -33,6 +35,27 @@ import { RefreshResponseDto } from './dto/refresh-response.dto';
 })
 export class AuthController {
   constructor(private readonly service: AuthService) {}
+
+  @Post('phone/request-otp')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async requestOtp(
+    @Body() requestOtpDto: AuthPhoneOtpRequestDto,
+  ): Promise<void> {
+    return this.service.requestOtp(requestOtpDto);
+  }
+  // <------------------------------------->
+
+  // <--- ADD NEW ENDPOINT: Verify OTP & Login --->
+  @Post('phone/verify-otp')
+  @ApiOkResponse({
+    type: LoginResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  async verifyOtpAndLogin(
+    @Body() verifyOtpDto: AuthPhoneOtpVerifyDto,
+  ): Promise<LoginResponseDto> {
+    return this.service.verifyOtpAndLogin(verifyOtpDto);
+  }
 
   @SerializeOptions({
     groups: ['me'],

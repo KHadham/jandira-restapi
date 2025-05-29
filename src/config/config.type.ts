@@ -1,4 +1,4 @@
-import { AppConfig } from './app-config.type';
+import { AppConfig, RedisConfig } from './app-config.type';
 import { AuthConfig } from '../auth/config/auth-config.type';
 import { DatabaseConfig } from '../database/config/database-config.type';
 import { FileConfig } from '../files/config/file-config.type';
@@ -10,4 +10,5 @@ export type AllConfigType = {
   database: DatabaseConfig;
   file: FileConfig;
   mail: MailConfig;
+  redis: RedisConfig; // <--- Add this line
 };

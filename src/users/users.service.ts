@@ -1,6 +1,7 @@
 import {
   HttpStatus,
   Injectable,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -51,23 +52,22 @@ export class UsersService {
           },
         });
       }
-      email = createUserDto.email;
+      email = createUserDto.email.toLowerCase().trim(); // Keep cleansing
     }
 
-    // Add phone number handling
     let phone: string | null = null;
     if (createUserDto.phone) {
-      const userObject = await this.usersRepository.findByPhone(
-        createUserDto.phone,
-      );
-      if (userObject) {
-        throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            phone: 'phoneAlreadyExists',
-          },
-        });
-      }
+      // const userObject = await this.usersRepository.findByPhone(
+      //   createUserDto.phone,
+      // );
+      // if (userObject) {
+      //   throw new UnprocessableEntityException({
+      //     status: HttpStatus.UNPROCESSABLE_ENTITY,
+      //     errors: {
+      //       phone: 'phoneAlreadyExists',
+      //     },
+      //   });
+      // }
       phone = createUserDto.phone;
     }
 
@@ -136,7 +136,7 @@ export class UsersService {
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
       email: email,
-      phone: phone, // Save the phone number
+      phone: phone,
       password: password,
       photo: photo,
       role: role,
@@ -144,6 +144,20 @@ export class UsersService {
       provider: createUserDto.provider ?? AuthProvidersEnum.email,
       socialId: createUserDto.socialId,
     });
+  }
+
+  // <--- ADD THIS NEW METHOD --->
+  async findByPhone(phone: string): Promise<User> {
+    const user = await this.usersRepository.findByPhone(phone);
+    if (!user) {
+      throw new NotFoundException({
+        status: HttpStatus.NOT_FOUND, // Use HttpStatus for consistency
+        errors: {
+          phone: 'userWithPhoneNumberNotFound',
+        },
+      });
+    }
+    return user;
   }
 
   findManyWithPagination({
