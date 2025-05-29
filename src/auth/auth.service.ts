@@ -6,6 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import ms from 'ms';
 import crypto from 'crypto';
@@ -56,6 +57,11 @@ export class AuthService {
 
   private getOtpKey(phone: string): string {
     return `otp:${phone}`;
+  }
+
+  private getOtpCooldownKey(phone: string): string {
+    // <--- New helper for cooldown key
+    return `otp_cooldown:${phone}`;
   }
 
   async storeOtp(phone: string, fullName?: string | null): Promise<string> {
@@ -115,9 +121,23 @@ export class AuthService {
     try {
       console.log(`Sending OTP ${otp} to ${phone} via WhatsApp (Fonnte)`);
       // Ensure you have axios installed (npm install axios) or use another HTTP client
-      await axios.get(
+      const response = await axios.get(
         `https://api.fonnte.com/send?token=${fonnteToken}&target=${phone}&message=${message}`,
       );
+      console.log('Fonnte API response:', response.data);
+      if (response.data.status === false) {
+        // Check Fonnte's specific error response
+        console.error(
+          'Fonnte API error:',
+          response.data.reason ||
+            response.data.detail ||
+            'Unknown Fonnte error',
+        );
+        throw new Error(
+          'Failed to send OTP via Fonnte. ' +
+            (response.data.reason || response.data.detail),
+        );
+      }
     } catch (error) {
       console.error(`Failed to send OTP to ${phone}:`, error);
       throw new Error('Failed to send OTP.');
@@ -126,6 +146,23 @@ export class AuthService {
 
   async requestOtp(dto: AuthPhoneOtpRequestDto): Promise<void> {
     const { phone, fullName } = dto;
+    const cooldownSeconds = this.configService.get('redis.otpCooldownSeconds', {
+      infer: true,
+    }) as number;
+    const cooldownKey = this.getOtpCooldownKey(phone);
+
+    const lastRequestTimestampString = await this.redis.get(cooldownKey);
+    if (lastRequestTimestampString) {
+      const lastRequestTimestamp = parseInt(lastRequestTimestampString, 10);
+      const timeSinceLastRequest = (Date.now() - lastRequestTimestamp) / 1000; // in seconds
+
+      if (timeSinceLastRequest < cooldownSeconds) {
+        const timeLeft = Math.ceil(cooldownSeconds - timeSinceLastRequest);
+        throw new ServiceUnavailableException(
+          `Please wait ${timeLeft} seconds before requesting another OTP.`,
+        );
+      }
+    }
 
     let user: User | null;
     try {
@@ -157,6 +194,12 @@ export class AuthService {
 
     // Send OTP via WhatsApp (or SMS)
     await this.sendOtpViaWhatsApp(phone, otp);
+    await this.redis.set(
+      cooldownKey,
+      Date.now().toString(),
+      'EX',
+      cooldownSeconds,
+    );
   }
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {

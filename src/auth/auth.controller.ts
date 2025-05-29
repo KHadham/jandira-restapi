@@ -27,6 +27,7 @@ import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { AuthPhoneOtpRequestDto } from './dto/auth-phone-otp-request.dto';
 import { AuthPhoneOtpVerifyDto } from './dto/auth-phone-otp-verify.dto';
+import { AuthOtpSentResponseDto } from './dto/auth-otp-sent-response.dto'; // <--- IMPORT NEW DTO
 
 @ApiTags('Auth')
 @Controller({
@@ -37,11 +38,15 @@ export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('phone/request-otp')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AuthOtpSentResponseDto })
   async requestOtp(
     @Body() requestOtpDto: AuthPhoneOtpRequestDto,
-  ): Promise<void> {
-    return this.service.requestOtp(requestOtpDto);
+  ): Promise<AuthOtpSentResponseDto> {
+    await this.service.requestOtp(requestOtpDto);
+    return {
+      message: 'OTP has been sent successfully to your phone number.', // <--- RETURN SUCCESS MESSAGE
+    };
   }
   // <------------------------------------->
 
