@@ -146,7 +146,6 @@ export class UsersService {
     });
   }
 
-  // <--- ADD THIS NEW METHOD --->
   async findByPhone(phone: string): Promise<User> {
     const user = await this.usersRepository.findByPhone(phone);
     if (!user) {
@@ -298,20 +297,30 @@ export class UsersService {
         id: updateUserDto.status.id,
       };
     }
+    const payloadToUpdate: Partial<User> = {};
+    if (updateUserDto.firstName !== undefined)
+      payloadToUpdate.firstName = updateUserDto.firstName;
+    if (updateUserDto.lastName !== undefined)
+      payloadToUpdate.lastName = updateUserDto.lastName;
+    if (email !== undefined) payloadToUpdate.email = email; // 'email' var already handles null
+    if (password !== undefined) payloadToUpdate.password = password;
+    if (photo !== undefined) payloadToUpdate.photo = photo; // 'photo' var already handles null or FileType
+    if (role !== undefined) payloadToUpdate.role = role;
+    if (status !== undefined) payloadToUpdate.status = status;
+    if (updateUserDto.provider !== undefined)
+      payloadToUpdate.provider = updateUserDto.provider;
+    if (updateUserDto.socialId !== undefined)
+      payloadToUpdate.socialId = updateUserDto.socialId;
+    // Add any other fields from UpdateUserDto that need to be in the payload
 
-    return this.usersRepository.update(id, {
-      // Do not remove comment below.
-      // <updating-property-payload />
-      firstName: updateUserDto.firstName,
-      lastName: updateUserDto.lastName,
-      email,
-      password,
-      photo,
-      role,
-      status,
-      provider: updateUserDto.provider,
-      socialId: updateUserDto.socialId,
-    });
+    // Perform the update
+    await this.usersRepository.update(id, payloadToUpdate);
+    const updatedUser = await this.usersRepository.findById(id);
+    if (!updatedUser) {
+      // This case should ideally not be reached if the ID was valid for update
+      throw new NotFoundException(`User with ID ${id} not found after update.`);
+    }
+    return updatedUser;
   }
 
   async remove(id: User['id']): Promise<void> {

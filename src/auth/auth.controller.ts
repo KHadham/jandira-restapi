@@ -48,9 +48,7 @@ export class AuthController {
       message: 'OTP has been sent successfully to your phone number.', // <--- RETURN SUCCESS MESSAGE
     };
   }
-  // <------------------------------------->
 
-  // <--- ADD NEW ENDPOINT: Verify OTP & Login --->
   @Post('phone/verify-otp')
   @ApiOkResponse({
     type: LoginResponseDto,

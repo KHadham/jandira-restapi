@@ -34,6 +34,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
 
   @ApiPropertyOptional({ type: () => FileDto })
   @IsOptional()
+  @Type(() => FileDto) // Ensures it's transformed to FileDto
   photo?: FileDto | null;
 
   @ApiPropertyOptional({ type: () => RoleDto })

@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   HttpStatus,
   Module,
   UnprocessableEntityException,
@@ -12,11 +13,13 @@ import { randomStringGenerator } from '@nestjs/common/utils/random-string-genera
 import { FilesLocalService } from './files.service';
 import { RelationalFilePersistenceModule } from '../../persistence/relational/relational-persistence.module';
 import { AllConfigType } from '../../../../config/config.type';
+import { UsersModule } from '../../../../users/users.module';
 
 const infrastructurePersistenceModule = RelationalFilePersistenceModule;
 
 @Module({
   imports: [
+    forwardRef(() => UsersModule),
     infrastructurePersistenceModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],

@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   // common
   Module,
 } from '@nestjs/common';
@@ -15,7 +16,7 @@ const infrastructurePersistenceModule = RelationalUserPersistenceModule;
   imports: [
     // import modules, etc.
     infrastructurePersistenceModule,
-    FilesModule,
+    forwardRef(() => FilesModule),
   ],
   controllers: [UsersController],
   providers: [UsersService],

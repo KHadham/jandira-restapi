@@ -13,6 +13,7 @@ import { randomStringGenerator } from '@nestjs/common/utils/random-string-genera
 import { ConfigService } from '@nestjs/config';
 import { FileType } from '../../../domain/file';
 import { AllConfigType } from '../../../../config/config.type';
+import { FileDriver } from '../../../config/file-config.type';
 
 @Injectable()
 export class FilesS3PresignedService {
@@ -36,9 +37,19 @@ export class FilesS3PresignedService {
   }
 
   async create(
-    file: FileUploadDto,
+    fileDto: FileUploadDto,
+    userId: number, // <--- Add userId
   ): Promise<{ file: FileType; uploadSignedUrl: string }> {
-    if (!file) {
+    if (!fileDto) {
+      // Check fileDto
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          file: 'selectFile',
+        },
+      });
+    }
+    if (!fileDto) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
@@ -47,7 +58,7 @@ export class FilesS3PresignedService {
       });
     }
 
-    if (!file.fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    if (!fileDto.fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
         errors: {
@@ -57,7 +68,7 @@ export class FilesS3PresignedService {
     }
 
     if (
-      file.fileSize >
+      fileDto.fileSize >
       (this.configService.get('file.maxFileSize', {
         infer: true,
       }) || 0)
@@ -69,7 +80,7 @@ export class FilesS3PresignedService {
       });
     }
 
-    const key = `${randomStringGenerator()}.${file.fileName
+    const key = `${randomStringGenerator()}.${fileDto.fileName
       .split('.')
       .pop()
       ?.toLowerCase()}`;
@@ -79,11 +90,14 @@ export class FilesS3PresignedService {
         infer: true,
       }),
       Key: key,
-      ContentLength: file.fileSize,
+      ContentLength: fileDto.fileSize,
     });
     const signedUrl = await getSignedUrl(this.s3, command, { expiresIn: 3600 });
     const data = await this.fileRepository.create({
       path: key,
+      ownerId: userId, // <--- ADD ownerId
+      isPublic: false, // <--- ADD isPublic (default to false)
+      driver: FileDriver.S3,
     });
 
     return {
