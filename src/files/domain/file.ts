@@ -6,8 +6,6 @@ import { FileConfig, FileDriver } from '../config/file-config.type';
 
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { AppConfig } from '../../config/app-config.type';
-import appConfig from '../../config/app.config';
 import { User } from '../../users/domain/user';
 
 export class FileType {
@@ -33,6 +31,7 @@ export class FileType {
       ) {
         const s3 = new S3Client({
           region: (fileConfig() as FileConfig).awsS3Region ?? '',
+          endpoint: (fileConfig() as FileConfig).awsS3EndpointUrl ?? '', // <--- ADD ENDPOINT
           credentials: {
             accessKeyId: (fileConfig() as FileConfig).accessKeyId ?? '',
             secretAccessKey: (fileConfig() as FileConfig).secretAccessKey ?? '',
