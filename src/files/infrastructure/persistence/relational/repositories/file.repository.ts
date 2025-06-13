@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileEntity } from '../entities/file.entity';
-import { In, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { FileRepository } from '../../file.repository';
 
 import { FileMapper } from '../mappers/file.mapper';
 import { FileType } from '../../../../domain/file';
 import { NullableType } from '../../../../../utils/types/nullable.type';
+import { IPaginationOptions } from '../../../../../utils/types/pagination-options';
 
 @Injectable()
 export class FileRelationalRepository implements FileRepository {
@@ -40,5 +41,39 @@ export class FileRelationalRepository implements FileRepository {
     });
 
     return entities.map((entity) => FileMapper.toDomain(entity));
+  }
+
+  async findManyByOwnerIdWithPagination({
+    ownerId,
+    paginationOptions,
+    publicOnly, // <--- Receive the new parameter
+  }: {
+    ownerId: number;
+    paginationOptions: IPaginationOptions;
+    publicOnly: boolean;
+  }): Promise<[FileType[], number]> {
+    // Dynamically build the where clause
+    const where: FindOptionsWhere<FileEntity> = {
+      ownerId: ownerId,
+    };
+
+    if (publicOnly) {
+      where.isPublic = true; // Add this condition only if needed
+    }
+
+    const [entities, total] = await this.fileRepository.findAndCount({
+      where: where, // Use the dynamic where clause
+      skip: (paginationOptions.page - 1) * paginationOptions.limit,
+      take: paginationOptions.limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    return [entities.map((entity) => FileMapper.toDomain(entity)), total];
+  }
+
+  async remove(id: FileType['id']): Promise<void> {
+    await this.fileRepository.delete(id);
   }
 }

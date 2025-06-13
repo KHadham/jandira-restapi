@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { FindOptionsWhere, Repository, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { NullableType } from '../../../../../utils/types/nullable.type';
 import { FilterUserDto, SortUserDto } from '../../../../dto/query-user.dto';
@@ -34,27 +34,48 @@ export class UsersRelationalRepository implements UserRepository {
     sortOptions?: SortUserDto[] | null;
     paginationOptions: IPaginationOptions;
   }): Promise<User[]> {
-    const where: FindOptionsWhere<UserEntity> = {};
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
+
+    // Eagerly load relations needed for mapping
+    queryBuilder.leftJoinAndSelect('user.role', 'role');
+    queryBuilder.leftJoinAndSelect('user.status', 'status');
+    queryBuilder.leftJoinAndSelect('user.photo', 'photo');
+
+    // --- NEW LOGIC: Join and count files ---
+    // This TypeORM feature loads the count of the 'files' relation
+    // and maps it to a new property on the entity called 'filesCount'.
+    queryBuilder.loadRelationCountAndMap('user.filesCount', 'user.files');
+    // --- END OF NEW LOGIC ---
+
     if (filterOptions?.roles?.length) {
-      where.role = filterOptions.roles.map((role) => ({
-        id: Number(role.id),
-      }));
+      queryBuilder.andWhere('role.id IN (:...roles)', {
+        roles: filterOptions.roles.map((role) => role.id),
+      });
     }
 
-    const entities = await this.usersRepository.find({
-      skip: (paginationOptions.page - 1) * paginationOptions.limit,
-      take: paginationOptions.limit,
-      where: where,
-      order: sortOptions?.reduce(
-        (accumulator, sort) => ({
-          ...accumulator,
-          [sort.orderBy]: sort.order,
-        }),
-        {},
-      ),
-    });
+    if (sortOptions?.length) {
+      sortOptions.forEach((sort) => {
+        queryBuilder.addOrderBy(
+          `user.${sort.orderBy}`,
+          sort.order.toUpperCase() as 'ASC' | 'DESC',
+        );
+      });
+    } else {
+      queryBuilder.orderBy('user.createdAt', 'DESC'); // Default sort
+    }
 
-    return entities.map((user) => UserMapper.toDomain(user));
+    queryBuilder
+      .skip((paginationOptions.page - 1) * paginationOptions.limit)
+      .take(paginationOptions.limit);
+
+    const entities = await queryBuilder.getMany();
+
+    return entities.map((userEntity) => {
+      // We need to manually add filesCount to the domain mapping if it doesn't map automatically
+      const userDomain = UserMapper.toDomain(userEntity);
+      userDomain.filesCount = (userEntity as any).filesCount;
+      return userDomain;
+    });
   }
 
   async findById(id: User['id']): Promise<NullableType<User>> {

@@ -65,7 +65,7 @@ export class UsersController {
   @SerializeOptions({
     groups: ['admin'],
   })
-  @Get()
+  @Get() // This maps to GET /api/v1/users
   @HttpCode(HttpStatus.OK)
   async findAll(
     @Query() query: QueryUserDto,
@@ -76,6 +76,8 @@ export class UsersController {
       limit = 50;
     }
 
+    // We can use the infinityPagination helper as it is.
+    // The underlying repository method is now enhanced.
     return infinityPagination(
       await this.usersService.findManyWithPagination({
         filterOptions: query?.filters,

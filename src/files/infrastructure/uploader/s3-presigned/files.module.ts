@@ -40,15 +40,20 @@ const infrastructurePersistenceModule = RelationalFilePersistenceModule;
 
         return {
           fileFilter: (request, file, callback) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+            if (!allowedMimeTypes.includes(file.mimetype)) {
               return callback(
                 new UnprocessableEntityException({
                   status: HttpStatus.UNPROCESSABLE_ENTITY,
-                  errors: { file: `cantUploadFileType` },
+                  errors: {
+                    file: `File type ${file.mimetype} is not allowed.`,
+                  },
                 }),
                 false,
               );
             }
+
             callback(null, true);
           },
           storage: multerS3({

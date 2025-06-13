@@ -7,7 +7,11 @@ import {
 } from '@nestjs/common';
 import { FileRepository } from '../../persistence/file.repository';
 
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { FileType } from '../../../domain/file';
@@ -15,6 +19,7 @@ import { AllConfigType } from '../../../../config/config.type';
 import { FileDriver } from '../../../config/file-config.type';
 import { User } from '../../../../users/domain/user';
 import { RoleEnum } from '../../../../roles/roles.enum';
+import { IPaginationOptions } from '../../../../utils/types/pagination-options';
 
 @Injectable()
 export class FilesS3PresignedService {
@@ -95,5 +100,49 @@ export class FilesS3PresignedService {
     return {
       file: fileEntity,
     };
+  }
+
+  async delete(fileId: string, requestingUser: User): Promise<void> {
+    const file = await this.fileRepository.findById(fileId);
+    if (!file) {
+      throw new NotFoundException('File not found.');
+    }
+
+    const isAdmin = requestingUser.role?.id === RoleEnum.admin;
+    const isOwner = file.ownerId === requestingUser.id;
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this file.',
+      );
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: this.configService.getOrThrow('file.awsDefaultS3Bucket', {
+        infer: true,
+      }),
+      Key: file.path,
+    });
+    await this.s3.send(command);
+
+    await this.fileRepository.remove(fileId);
+  }
+
+  findManyByUserId({
+    targetUserId,
+    requestingUser,
+    paginationOptions,
+  }: {
+    targetUserId: User['id'];
+    requestingUser: User;
+    paginationOptions: IPaginationOptions;
+  }): Promise<[FileType[], number]> {
+    const publicOnly = requestingUser.id !== targetUserId;
+
+    return this.fileRepository.findManyByOwnerIdWithPagination({
+      ownerId: Number(targetUserId),
+      paginationOptions,
+      publicOnly: publicOnly,
+    });
   }
 }

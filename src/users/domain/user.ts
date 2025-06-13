@@ -2,7 +2,7 @@ import { Exclude, Expose } from 'class-transformer';
 import { FileType } from '../../files/domain/file';
 import { Role } from '../../roles/domain/role';
 import { Status } from '../../statuses/domain/status';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const idType = Number;
 
@@ -11,6 +11,12 @@ export class User {
     type: idType,
   })
   id: number | string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description: 'Total number of files uploaded by the user.',
+  })
+  filesCount?: number;
 
   @ApiProperty({
     type: String,
