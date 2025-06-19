@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
   UnprocessableEntityException,
   ServiceUnavailableException,
+  ForbiddenException,
 } from '@nestjs/common';
 import ms from 'ms';
 import crypto from 'crypto';
@@ -63,6 +64,9 @@ export class AuthService {
     // <--- New helper for cooldown key
     return `otp_cooldown:${phone}`;
   }
+  private getOtpAttemptKey(phone: string): string {
+    return `otp_attempts:${phone}`;
+  }
 
   async storeOtp(phone: string, fullName?: string | null): Promise<string> {
     const otpLength =
@@ -71,15 +75,18 @@ export class AuthService {
       this.configService.get('redis.otpExpiresInSeconds', { infer: true }) ||
       300;
     const otp = this.generateOtp(otpLength);
-    const key = this.getOtpKey(phone);
+    const otpKey = this.getOtpKey(phone);
+    const attemptKey = this.getOtpAttemptKey(phone); // Get attempt key
 
-    // Store OTP and potentially fullName
+    // <--- When storing a new OTP, reset any previous attempt counter --->
+    await this.redis.del(attemptKey);
+
     const dataToStore = {
       otp: otp,
-      fullName: fullName, // Will be null if user exists or not provided
+      fullName: fullName,
     };
 
-    await this.redis.set(key, JSON.stringify(dataToStore), 'EX', expiresIn);
+    await this.redis.set(otpKey, JSON.stringify(dataToStore), 'EX', expiresIn);
     return otp;
   }
 
@@ -87,8 +94,15 @@ export class AuthService {
     phone: string,
     otpToVerify: string,
   ): Promise<{ otp: string; fullName: string | null }> {
-    const key = this.getOtpKey(phone);
-    const storedDataString = await this.redis.get(key);
+    const otpKey = this.getOtpKey(phone);
+    const attemptKey = this.getOtpAttemptKey(phone); // Get attempt key
+    const maxAttempts =
+      this.configService.get('redis.otpMaxAttempts', { infer: true }) || 3;
+    const expiresIn =
+      this.configService.get('redis.otpExpiresInSeconds', { infer: true }) ||
+      300;
+
+    const storedDataString = await this.redis.get(otpKey);
 
     if (!storedDataString) {
       throw new UnprocessableEntityException('OTP expired or not found.');
@@ -100,10 +114,29 @@ export class AuthService {
     };
 
     if (storedData.otp !== otpToVerify) {
+      // --- REFACTOR START: Handle incorrect attempt ---
+      const attempts = await this.redis.incr(attemptKey);
+
+      // Set an expiry on the attempt counter key itself so it's not permanent
+      if (attempts === 1) {
+        await this.redis.expire(attemptKey, expiresIn);
+      }
+
+      if (attempts >= maxAttempts) {
+        // Lockout: Delete the OTP and the attempt counter
+        await this.redis.del(otpKey, attemptKey);
+        throw new ForbiddenException(
+          'Too many incorrect OTP attempts. Please request a new OTP.',
+        );
+      }
+
+      // If under the limit, just throw the standard invalid OTP error
       throw new UnprocessableEntityException('Invalid OTP.');
+      // --- REFACTOR END ---
     }
 
-    await this.redis.del(key); // Delete after successful verification
+    // --- On success, delete both keys ---
+    await this.redis.del(otpKey, attemptKey);
     return storedData;
   }
 

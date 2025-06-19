@@ -25,6 +25,13 @@ class EnvironmentVariablesValidator {
   @Min(30)
   @Max(600)
   OTP_COOLDOWN_SECONDS: number;
+
+  // <--- ADD VALIDATION FOR MAX ATTEMPTS --->
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  OTP_MAX_ATTEMPTS: number;
 }
 
 export default registerAs<RedisConfig>('redis', (): RedisConfig => {
@@ -41,5 +48,6 @@ export default registerAs<RedisConfig>('redis', (): RedisConfig => {
       process.env.OTP_COOLDOWN_SECONDS as string,
       10,
     ) as number,
+    otpMaxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS as string, 10),
   };
 });

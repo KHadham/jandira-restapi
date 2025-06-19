@@ -15,5 +15,6 @@ export interface RedisConfig {
   uri: string | undefined;
   otpExpiresInSeconds: number;
   otpLength: number;
-  otpCooldownSeconds: number; // <--- ADD THIS
+  otpCooldownSeconds: number;
+  otpMaxAttempts: number; // <--- ADD THIS
 }
