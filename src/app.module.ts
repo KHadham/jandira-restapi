@@ -7,7 +7,7 @@ import authConfig from './auth/config/auth.config';
 import appConfig from './config/app.config';
 import mailConfig from './mail/config/mail.config';
 import fileConfig from './files/config/file.config';
-import redisConfig from './config/redis.config'; // <--- Add this import
+import redisConfig from './config/redis.config';
 
 import path from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -21,6 +21,11 @@ import { AllConfigType } from './config/config.type';
 import { SessionModule } from './session/session.module';
 import { MailerModule } from './mailer/mailer.module';
 import { RedisModule } from './redis/redis.module';
+
+// --- ADD: Import Throttler and APP_GUARD ---
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+// --- END OF ADD ---
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -43,6 +48,21 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       ],
       envFilePath: ['.env'],
     }),
+    // --- ADD: Configure ThrottlerModule to use variables from .env ---
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AllConfigType>) => [
+        // <--- START a bracket here
+        {
+          ttl: configService.getOrThrow('app.throttlerTtl', { infer: true }),
+          limit: configService.getOrThrow('app.throttlerLimit', {
+            infer: true,
+          }),
+        },
+      ], // <--- END the bracket here
+    }),
+    // --- END OF ADD ---
     infrastructureDatabaseModule,
     I18nModule.forRootAsync({
       useFactory: (configService: ConfigService<AllConfigType>) => ({
@@ -56,7 +76,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
           use: HeaderResolver,
           useFactory: (configService: ConfigService<AllConfigType>) => {
             return [
-              configService.get('app.headerLanguage', {
+              configService.getOrThrow('app.headerLanguage', {
                 infer: true,
               }),
             ];
@@ -76,5 +96,13 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     HomeModule,
     RedisModule,
   ],
+  // --- ADD: Register the ThrottlerGuard as a global guard ---
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
+  // --- END OF ADD ---
 })
 export class AppModule {}

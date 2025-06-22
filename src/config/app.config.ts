@@ -52,6 +52,14 @@ class EnvironmentVariablesValidator {
   @IsString() // <--- ADD VALIDATOR
   @IsNotEmpty()
   FONTEE_TOKEN: string;
+
+  @IsInt()
+  @Min(1)
+  THROTTLER_TTL: number;
+
+  @IsInt()
+  @Min(1)
+  THROTTLER_LIMIT: number;
 }
 
 export default registerAs<AppConfig>('app', () => {
@@ -72,5 +80,7 @@ export default registerAs<AppConfig>('app', () => {
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || 'en',
     headerLanguage: process.env.APP_HEADER_LANGUAGE || 'x-custom-lang',
     fonnteToken: process.env.FONTEE_TOKEN as string,
+    throttlerTtl: parseInt(process.env.THROTTLER_TTL as string, 10) * 1000,
+    throttlerLimit: parseInt(process.env.THROTTLER_LIMIT as string, 10),
   };
 });

@@ -9,6 +9,8 @@ export type AppConfig = {
   fallbackLanguage: string;
   headerLanguage: string;
   fonnteToken: string;
+  throttlerTtl: number;
+  throttlerLimit: number;
 };
 
 export interface RedisConfig {
