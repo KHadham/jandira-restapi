@@ -40,12 +40,8 @@ export class UsersRelationalRepository implements UserRepository {
     queryBuilder.leftJoinAndSelect('user.role', 'role');
     queryBuilder.leftJoinAndSelect('user.status', 'status');
     queryBuilder.leftJoinAndSelect('user.photo', 'photo');
-
-    // --- NEW LOGIC: Join and count files ---
-    // This TypeORM feature loads the count of the 'files' relation
-    // and maps it to a new property on the entity called 'filesCount'.
+    queryBuilder.leftJoinAndSelect('user.identityPhoto', 'identityPhoto'); // <--- ADD THIS LINE
     queryBuilder.loadRelationCountAndMap('user.filesCount', 'user.files');
-    // --- END OF NEW LOGIC ---
 
     if (filterOptions?.roles?.length) {
       queryBuilder.andWhere('role.id IN (:...roles)', {
@@ -79,11 +75,26 @@ export class UsersRelationalRepository implements UserRepository {
   }
 
   async findById(id: User['id']): Promise<NullableType<User>> {
-    const entity = await this.usersRepository.findOne({
-      where: { id: Number(id) },
-    });
+    // --- REFACTOR START: Use QueryBuilder to add filesCount ---
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
 
-    return entity ? UserMapper.toDomain(entity) : null;
+    queryBuilder
+      .where('user.id = :id', { id: Number(id) })
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.status', 'status')
+      .leftJoinAndSelect('user.photo', 'photo')
+      .leftJoinAndSelect('user.identityPhoto', 'identityPhoto')
+      .loadRelationCountAndMap('user.filesCount', 'user.files');
+
+    const entity = await queryBuilder.getOne();
+    // --- REFACTOR END ---
+
+    if (!entity) {
+      return null;
+    }
+
+    // Use the mapper, which we already updated to handle filesCount
+    return UserMapper.toDomain(entity);
   }
 
   async findByIds(ids: User['id'][]): Promise<User[]> {

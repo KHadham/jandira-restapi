@@ -534,8 +534,17 @@ export class AuthService {
       );
     }
 
+    const fullUser = await this.usersService.findById(user.id);
+
+    if (!fullUser) {
+      // This should not happen if the user was just found/created, but it's a good safeguard.
+      throw new UnprocessableEntityException(
+        'Could not retrieve full user profile after login.',
+      );
+    }
+
     // Generate and return JWTs
-    return this.generateTokens(user);
+    return this.generateTokens(fullUser);
   }
 
   async confirmEmail(hash: string): Promise<void> {

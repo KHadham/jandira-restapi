@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpStatus,
   Injectable,
   NotFoundException,
@@ -175,8 +176,28 @@ export class UsersService {
     });
   }
 
-  findById(id: User['id']): Promise<NullableType<User>> {
-    return this.usersRepository.findById(id);
+  async findById(
+    id: User['id'],
+    requestingUser?: User, // Make requestingUser optional for internal calls
+  ): Promise<NullableType<User>> {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      return null;
+    }
+
+    // If a requestingUser is provided, check permissions
+    if (requestingUser) {
+      const isAdmin = requestingUser.role?.id === RoleEnum.admin;
+      const isOwner = requestingUser.id === user.id;
+
+      // Allow if user is an admin OR is the owner of the profile
+      if (!isAdmin && !isOwner) {
+        throw new ForbiddenException();
+      }
+    }
+    console.log('requestingUser.role?.id >>>>>>', requestingUser);
+    return user;
   }
 
   findByIds(ids: User['id'][]): Promise<User[]> {
@@ -240,7 +261,6 @@ export class UsersService {
     }
 
     let photo: FileType | null | undefined = undefined;
-
     if (updateUserDto.photo?.id) {
       const fileObject = await this.filesService.findById(
         updateUserDto.photo.id,
@@ -297,27 +317,55 @@ export class UsersService {
         id: updateUserDto.status.id,
       };
     }
+
+    let identityPhoto: FileType | null | undefined = undefined;
+    if (updateUserDto.identityPhoto?.id) {
+      const fileObject = await this.filesService.findById(
+        updateUserDto.identityPhoto.id,
+      );
+      if (!fileObject) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            identityPhoto: 'imageNotExists',
+          },
+        });
+      }
+      identityPhoto = fileObject;
+    } else if (updateUserDto.identityPhoto === null) {
+      identityPhoto = null;
+    }
+
     const payloadToUpdate: Partial<User> = {};
     if (updateUserDto.firstName !== undefined)
       payloadToUpdate.firstName = updateUserDto.firstName;
+    if (updateUserDto.address !== undefined)
+      // This line should exist from our last step
+      payloadToUpdate.address = updateUserDto.address;
     if (updateUserDto.lastName !== undefined)
       payloadToUpdate.lastName = updateUserDto.lastName;
-    if (email !== undefined) payloadToUpdate.email = email; // 'email' var already handles null
+    if (email !== undefined) payloadToUpdate.email = email;
     if (password !== undefined) payloadToUpdate.password = password;
-    if (photo !== undefined) payloadToUpdate.photo = photo; // 'photo' var already handles null or FileType
+    if (photo !== undefined) payloadToUpdate.photo = photo;
+
+    // --- THIS IS THE FIX ---
+    if (identityPhoto !== undefined) {
+      payloadToUpdate.identityPhoto = identityPhoto;
+    }
+    // --- END OF FIX ---
+
     if (role !== undefined) payloadToUpdate.role = role;
     if (status !== undefined) payloadToUpdate.status = status;
     if (updateUserDto.provider !== undefined)
       payloadToUpdate.provider = updateUserDto.provider;
     if (updateUserDto.socialId !== undefined)
       payloadToUpdate.socialId = updateUserDto.socialId;
-    // Add any other fields from UpdateUserDto that need to be in the payload
 
-    // Perform the update
+    console.log('payloadToUpdate >>>>>', payloadToUpdate);
     await this.usersRepository.update(id, payloadToUpdate);
+
     const updatedUser = await this.usersRepository.findById(id);
     if (!updatedUser) {
-      // This case should ideally not be reached if the ID was valid for update
       throw new NotFoundException(`User with ID ${id} not found after update.`);
     }
     return updatedUser;

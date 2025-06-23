@@ -25,8 +25,6 @@ export class UserEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToMany(() => FileEntity, (file) => file.owner)
-  files: FileEntity[];
   // For "string | null" we need to use String type.
   // More info: https://github.com/typeorm/typeorm/issues/2567
   @Column({ type: String, unique: true, nullable: true })
@@ -54,11 +52,24 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: String, nullable: true, unique: false })
   phone: string | null;
 
+  // <--- ADD address column --->
+  @Column({ type: 'text', nullable: true })
+  address: string | null;
+
+  @OneToOne(() => FileEntity, {
+    eager: false, // <--- This is the key
+  })
+  @JoinColumn()
+  identityPhoto?: FileEntity | null;
+
   @OneToOne(() => FileEntity, {
     eager: true,
   })
   @JoinColumn()
   photo?: FileEntity | null;
+
+  @OneToMany(() => FileEntity, (file) => file.owner)
+  files: FileEntity[];
 
   @ManyToOne(() => RoleEntity, {
     eager: true,

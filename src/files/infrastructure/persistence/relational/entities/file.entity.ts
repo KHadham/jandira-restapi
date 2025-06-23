@@ -12,6 +12,7 @@ import {
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { FileDriver } from '../../../../config/file-config.type';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity'; // <--- IMPORT USER ENTITY
+import { FileCategoryEnum } from '../../../../domain/file-category.enum';
 
 @Entity({
   name: 'file',
@@ -30,6 +31,12 @@ export class FileEntity extends EntityRelationalHelper {
   })
   driver: FileDriver;
 
+  @Column({
+    type: 'enum',
+    enum: FileCategoryEnum,
+    default: FileCategoryEnum.GENERAL, // Default to OTHER if not specified
+  })
+  category: FileCategoryEnum;
   // <--- NEW COLUMNS --->
   @Index()
   @Column({ type: Number, nullable: true }) // Assuming User ID is number. Nullable for now if some old files don't have owners.

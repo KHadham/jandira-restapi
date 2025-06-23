@@ -54,6 +54,7 @@ export class AuthController {
     type: LoginResponseDto,
   })
   @HttpCode(HttpStatus.OK)
+  @SerializeOptions({ groups: ['me'] }) // <--- ADD THIS DECORATOR
   async verifyOtpAndLogin(
     @Body() verifyOtpDto: AuthPhoneOtpVerifyDto,
   ): Promise<LoginResponseDto> {

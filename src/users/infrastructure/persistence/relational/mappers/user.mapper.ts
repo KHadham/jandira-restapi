@@ -16,9 +16,18 @@ export class UserMapper {
     domainEntity.firstName = raw.firstName;
     domainEntity.lastName = raw.lastName;
     domainEntity.phone = raw.phone;
+    domainEntity.address = raw.address;
+    domainEntity.filesCount = (raw as any).filesCount;
     if (raw.photo) {
       domainEntity.photo = FileMapper.toDomain(raw.photo);
     }
+    // --- ADD THIS BLOCK ---
+    if (raw.identityPhoto) {
+      domainEntity.identityPhoto = FileMapper.toDomain(raw.identityPhoto);
+    }
+    domainEntity.identityPhoto = raw.identityPhoto
+      ? FileMapper.toDomain(raw.identityPhoto)
+      : null;
     domainEntity.role = raw.role;
     domainEntity.status = raw.status;
     domainEntity.createdAt = raw.createdAt;
@@ -34,7 +43,14 @@ export class UserMapper {
       role = new RoleEntity();
       role.id = Number(domainEntity.role.id);
     }
-
+    let identityPhoto: FileEntity | null | undefined = undefined;
+    if (domainEntity.identityPhoto) {
+      identityPhoto = new FileEntity();
+      identityPhoto.id = domainEntity.identityPhoto.id;
+      identityPhoto.path = domainEntity.identityPhoto.path;
+    } else if (domainEntity.identityPhoto === null) {
+      identityPhoto = null;
+    }
     let photo: FileEntity | undefined | null = undefined;
 
     if (domainEntity.photo) {
@@ -64,6 +80,7 @@ export class UserMapper {
     persistenceEntity.lastName = domainEntity.lastName;
     persistenceEntity.phone = domainEntity.phone; // Add this line to map the phone property
     persistenceEntity.photo = photo;
+    persistenceEntity.identityPhoto = identityPhoto; // <--- ADD THIS
     persistenceEntity.role = role;
     persistenceEntity.status = status;
     persistenceEntity.createdAt = domainEntity.createdAt;

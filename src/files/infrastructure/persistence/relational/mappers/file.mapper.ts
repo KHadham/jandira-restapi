@@ -1,5 +1,6 @@
 import { FileDriver } from '../../../../config/file-config.type';
 import { FileType } from '../../../../domain/file';
+import { FileCategoryEnum } from '../../../../domain/file-category.enum';
 import { FileEntity } from '../entities/file.entity';
 
 export class FileMapper {
@@ -10,6 +11,7 @@ export class FileMapper {
     domainEntity.driver = raw.driver;
     domainEntity.ownerId = raw.ownerId;
     domainEntity.isPublic = raw.isPublic;
+    domainEntity.category = raw.category; // Ensure category is mapped if needed
     return domainEntity;
   }
 
@@ -20,6 +22,8 @@ export class FileMapper {
     persistenceEntity.driver = domainEntity.driver as FileDriver; // Handle optional driver
     persistenceEntity.ownerId = domainEntity.ownerId as number;
     persistenceEntity.isPublic = domainEntity.isPublic;
+    persistenceEntity.category =
+      domainEntity.category ?? FileCategoryEnum.GENERAL; // Default to LOCAL if not specified
     return persistenceEntity;
   }
 }

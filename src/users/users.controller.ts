@@ -11,6 +11,7 @@ import {
   HttpStatus,
   HttpCode,
   SerializeOptions,
+  Req,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -37,8 +38,8 @@ import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
 
 @ApiBearerAuth()
-@Roles(RoleEnum.admin)
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+// @Roles(RoleEnum.admin)
+@UseGuards(AuthGuard('jwt'))
 @ApiTags('Users')
 @Controller({
   path: 'users',
@@ -50,6 +51,8 @@ export class UsersController {
   @ApiCreatedResponse({
     type: User,
   })
+  @Roles(RoleEnum.admin) // <--- Keep this endpoint admin-only
+  @UseGuards(RolesGuard)
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -62,6 +65,8 @@ export class UsersController {
   @ApiOkResponse({
     type: InfinityPaginationResponse(User),
   })
+  @Roles(RoleEnum.admin) // <--- Keep this endpoint admin-only
+  @UseGuards(RolesGuard)
   @SerializeOptions({
     groups: ['admin'],
   })
@@ -91,26 +96,24 @@ export class UsersController {
     );
   }
 
-  @ApiOkResponse({
-    type: User,
-  })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
-  @Get(':id')
+  @ApiOkResponse({ type: User })
+  @SerializeOptions({ groups: ['admin'] })
+  @Get(':id') // <--- This endpoint is now open to all authenticated users
   @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'id',
-    type: String,
-    required: true,
-  })
-  findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
-    return this.usersService.findById(id);
+  @ApiParam({ name: 'id', type: String, required: true })
+  findOne(
+    @Param('id') id: User['id'],
+    @Req() request: { user: User }, // <--- Get the authenticated user
+  ): Promise<NullableType<User>> {
+    // We will pass the requesting user to the service for permission check
+    return this.usersService.findById(id, request.user);
   }
 
   @ApiOkResponse({
     type: User,
   })
+  @Roles(RoleEnum.admin) // <--- Keep this endpoint admin-only
+  @UseGuards(RolesGuard)
   @SerializeOptions({
     groups: ['admin'],
   })

@@ -34,6 +34,7 @@ import {
 } from '../../../../utils/dto/infinity-pagination-response.dto';
 import { QueryUserDto } from '../../../../users/dto/query-user.dto';
 import { infinityPagination } from '../../../../utils/infinity-pagination';
+import { FileCategoryEnum } from '../../../domain/file-category.enum';
 
 @ApiTags('Files')
 @Controller({
@@ -55,7 +56,6 @@ export class FilesS3PresignedController {
   @ApiConsumes('multipart/form-data') // <--- ADD: Specify content type
   @ApiBody({
     schema: {
-      // <--- ADD: Describe the expected body for Swagger
       type: 'object',
       properties: {
         file: {
@@ -73,8 +73,12 @@ export class FilesS3PresignedController {
     // Return type no longer includes the signed URL
     const userId = req.user.id as number;
 
-    // Pass the file object from multer-s3 directly to the service
-    return this.filesService.create(file, userId, false);
+    return this.filesService.create(
+      file,
+      userId,
+      false,
+      FileCategoryEnum.GENERAL,
+    ); // isPublic: false, isViewable: false
   }
 
   // <--- ADD NEW SECURE ACCESS ENDPOINT --->
@@ -117,8 +121,6 @@ export class FilesS3PresignedController {
     @Req() req: { user: User },
   ): Promise<User> {
     const userId = req.user.id as number;
-
-    // 1. Find the user to check for an existing photo
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found.');
@@ -129,7 +131,8 @@ export class FilesS3PresignedController {
     const { file: newProfilePicture } = await this.filesService.create(
       file,
       userId,
-      true, // isPublic: true
+      true,
+      FileCategoryEnum.PROFILE_PICTURE, // <--- PASS the correct category
     );
 
     // 3. Update the user's record to link to the new photo
@@ -158,6 +161,63 @@ export class FilesS3PresignedController {
     @Req() req: { user: User },
   ): Promise<void> {
     return this.filesService.delete(fileId, req.user);
+  }
+
+  @ApiCreatedResponse({
+    description: 'User identity photo uploaded successfully.',
+    type: User, // <--- CHANGE: Return the User object
+  })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @Post('upload/identity-photo')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        identityPhoto: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('identityPhoto'))
+  async uploadIdentityPhoto(
+    @UploadedFile() file: Express.MulterS3.File,
+    @Req() req: { user: User },
+  ): Promise<User> {
+    const userId = req.user.id as number;
+
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    const oldIdentityPhotoId = user.identityPhoto?.id;
+
+    const { file: newIdentityPhoto } = await this.filesService.create(
+      file,
+      userId,
+      false, // isPublic: false
+      FileCategoryEnum.IDENTITY_CARD,
+    );
+
+    // This update call will now correctly pass the identityPhoto
+    const updatedUser = await this.usersService.update(userId, {
+      identityPhoto: { id: newIdentityPhoto.id } as FileType,
+    });
+
+    if (!updatedUser) {
+      // Re-check after update
+      throw new NotFoundException('User could not be updated.');
+    }
+
+    if (oldIdentityPhotoId) {
+      await this.filesService.delete(oldIdentityPhotoId, req.user);
+    }
+
+    // Return the full, updated user object for a consistent response
+    return updatedUser;
   }
 
   @ApiOkResponse({

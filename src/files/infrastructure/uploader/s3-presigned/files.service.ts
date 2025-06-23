@@ -1,6 +1,5 @@
 import {
   ForbiddenException,
-  HttpStatus,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -20,6 +19,7 @@ import { FileDriver } from '../../../config/file-config.type';
 import { User } from '../../../../users/domain/user';
 import { RoleEnum } from '../../../../roles/roles.enum';
 import { IPaginationOptions } from '../../../../utils/types/pagination-options';
+import { FileCategoryEnum } from '../../../domain/file-category.enum';
 
 @Injectable()
 export class FilesS3PresignedService {
@@ -76,25 +76,20 @@ export class FilesS3PresignedService {
   }
 
   async create(
-    file: Express.MulterS3.File, // <--- CHANGE: We now receive the fully uploaded file object from multer-s3
+    file: Express.MulterS3.File,
     userId: User['id'],
     isPublic: boolean = false,
+    category: FileCategoryEnum,
   ): Promise<{ file: FileType }> {
-    // <--- CHANGE: No longer returns uploadSignedUrl
     if (!file) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          file: 'selectFile',
-        },
-      });
+      throw new UnprocessableEntityException(/* ... */);
     }
-
     const fileEntity = await this.fileRepository.create({
-      path: file.key, // In multer-s3, file.key is the object key/path in the S3 bucket
+      path: file.key,
       ownerId: Number(userId),
       isPublic: isPublic,
-      driver: FileDriver.S3_PRESIGNED, // Keep the driver name for consistency
+      driver: FileDriver.S3_PRESIGNED,
+      category: category, // <--- SET category
     });
 
     return {

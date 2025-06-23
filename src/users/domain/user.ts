@@ -12,12 +12,6 @@ export class User {
   })
   id: number | string;
 
-  @ApiPropertyOptional({
-    type: Number,
-    description: 'Total number of files uploaded by the user.',
-  })
-  filesCount?: number;
-
   @ApiProperty({
     type: String,
     example: 'john.doe@example.com',
@@ -58,13 +52,28 @@ export class User {
     type: String,
     example: '081234567890',
   })
-  @Expose({ groups: ['me', 'admin'] })
+  @Expose({ groups: ['me', 'admin'] }) // visible to the user themselves or to an admin
   phone: string | null; // Added the phone property
 
+  @Expose({ groups: ['me', 'admin'] }) // Add this line
   @ApiProperty({
     type: () => FileType,
   })
   photo?: FileType | null;
+
+  @ApiPropertyOptional({ example: '123 Travel St, Wanderlust City, World' })
+  @Expose({ groups: ['me', 'admin'] }) // Add this line
+  address?: string | null;
+
+  @ApiPropertyOptional({ type: () => FileType })
+  @Expose({ groups: ['me', 'admin'] }) // Add this line
+  identityPhoto?: FileType | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description: 'Total number of files uploaded by the user.',
+  })
+  filesCount?: number;
 
   @ApiProperty({
     type: () => Role,

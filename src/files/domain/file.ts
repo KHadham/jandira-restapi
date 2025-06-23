@@ -7,6 +7,7 @@ import { FileConfig, FileDriver } from '../config/file-config.type';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { User } from '../../users/domain/user';
+import { FileCategoryEnum } from './file-category.enum';
 
 export class FileType {
   @ApiProperty({
@@ -64,6 +65,12 @@ export class FileType {
     description: 'ID of the user who owns the file',
   })
   ownerId?: User['id'] | null;
+
+  @ApiProperty({
+    enum: FileCategoryEnum,
+    example: FileCategoryEnum.GENERAL,
+  })
+  category?: FileCategoryEnum;
 
   @ApiProperty({
     type: Boolean,
