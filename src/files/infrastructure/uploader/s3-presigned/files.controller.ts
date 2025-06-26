@@ -115,11 +115,11 @@ export class FilesS3PresignedController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('profilePicture'))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadProfilePicture(
     @UploadedFile() file: Express.MulterS3.File,
     @Req() req: { user: User },
-  ): Promise<User> {
+  ): Promise<FileType> {
     const userId = req.user.id as number;
     const user = await this.usersService.findById(userId);
     if (!user) {
@@ -149,7 +149,7 @@ export class FilesS3PresignedController {
       await this.filesService.delete(oldPhotoId, req.user);
     }
 
-    return updatedUser;
+    return newProfilePicture;
   }
 
   @ApiBearerAuth()
@@ -182,11 +182,11 @@ export class FilesS3PresignedController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('identityPhoto'))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadIdentityPhoto(
     @UploadedFile() file: Express.MulterS3.File,
     @Req() req: { user: User },
-  ): Promise<User> {
+  ): Promise<FileType> {
     const userId = req.user.id as number;
 
     const user = await this.usersService.findById(userId);
@@ -217,7 +217,7 @@ export class FilesS3PresignedController {
     }
 
     // Return the full, updated user object for a consistent response
-    return updatedUser;
+    return newIdentityPhoto;
   }
 
   @ApiOkResponse({

@@ -8,6 +8,7 @@ import { FileMapper } from '../mappers/file.mapper';
 import { FileType } from '../../../../domain/file';
 import { NullableType } from '../../../../../utils/types/nullable.type';
 import { IPaginationOptions } from '../../../../../utils/types/pagination-options';
+import { FilterFileDto, SortFileDto } from '../../../../dto/query-file.dto';
 
 @Injectable()
 export class FileRelationalRepository implements FileRepository {
@@ -41,6 +42,49 @@ export class FileRelationalRepository implements FileRepository {
     });
 
     return entities.map((entity) => FileMapper.toDomain(entity));
+  }
+
+  async findManyWithPagination({
+    filterOptions,
+    sortOptions,
+    paginationOptions,
+  }: {
+    filterOptions?: FilterFileDto | null;
+    sortOptions?: SortFileDto[] | null;
+    paginationOptions: IPaginationOptions;
+  }): Promise<[FileType[], number]> {
+    const queryBuilder = this.fileRepository.createQueryBuilder('file');
+    queryBuilder.leftJoinAndSelect('file.owner', 'owner'); // Join with owner for potential filtering
+
+    if (filterOptions?.ownerId) {
+      queryBuilder.andWhere('file.ownerId = :ownerId', {
+        ownerId: filterOptions.ownerId,
+      });
+    }
+
+    if (filterOptions?.category) {
+      queryBuilder.andWhere('file.category = :category', {
+        category: filterOptions.category,
+      });
+    }
+
+    if (sortOptions?.length) {
+      sortOptions.forEach((sort) => {
+        queryBuilder.addOrderBy(
+          `file.${sort.orderBy}`,
+          sort.order.toUpperCase() as 'ASC' | 'DESC',
+        );
+      });
+    } else {
+      queryBuilder.orderBy('file.createdAt', 'DESC'); // Default sort
+    }
+
+    const [entities, total] = await queryBuilder
+      .skip((paginationOptions.page - 1) * paginationOptions.limit)
+      .take(paginationOptions.limit)
+      .getManyAndCount();
+
+    return [entities.map(FileMapper.toDomain), total];
   }
 
   async findManyByOwnerIdWithPagination({

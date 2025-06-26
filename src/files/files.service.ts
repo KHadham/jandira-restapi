@@ -6,6 +6,7 @@ import { NullableType } from '../utils/types/nullable.type';
 import { User } from '../users/domain/user';
 import { IPaginationOptions } from '../utils/types/pagination-options';
 import { RoleEnum } from '../roles/roles.enum';
+import { FilterFileDto, SortFileDto } from './dto/query-file.dto';
 
 @Injectable()
 export class FilesService {
@@ -43,6 +44,22 @@ export class FilesService {
       ownerId: Number(targetUserId),
       paginationOptions,
       publicOnly: publicOnly,
+    });
+  }
+
+  findManyWithPagination({
+    filterOptions,
+    sortOptions,
+    paginationOptions,
+  }: {
+    filterOptions?: FilterFileDto | null;
+    sortOptions?: SortFileDto[] | null;
+    paginationOptions: IPaginationOptions;
+  }): Promise<[FileType[], number]> {
+    return this.fileRepository.findManyWithPagination({
+      filterOptions,
+      sortOptions,
+      paginationOptions,
     });
   }
 }
