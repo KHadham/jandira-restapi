@@ -7,16 +7,17 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import * as path from 'path';
 import * as mime from 'mime-types';
-
 import { FileRepository } from '../../persistence/file.repository';
-import { AllConfigType } from '../../../../config/config.type';
+import { AllConfigType } from 'src/config/config.type';
 import { FileType } from '../../../domain/file';
 import { User } from '../../../../users/domain/user';
 import { RoleEnum } from '../../../../roles/roles.enum';
 import { FileDriver } from '../../../config/file-config.type';
+import { FileCategoryEnum } from 'src/files/domain/file-category.enum';
 
 @Injectable()
 export class FilesLocalService {
@@ -29,6 +30,7 @@ export class FilesLocalService {
     file: Express.Multer.File,
     userId: User['id'],
     isPublic: boolean = false,
+    category: FileCategoryEnum = FileCategoryEnum.GENERAL,
   ): Promise<{ file: FileType }> {
     if (!file) {
       throw new UnprocessableEntityException({
@@ -39,14 +41,35 @@ export class FilesLocalService {
       });
     }
     const createdFileEntry = await this.fileRepository.create({
-      path: file.path,
+      path: file.path.replace(/\\/g, '/'), // Normalize path for consistency
       ownerId: Number(userId),
       isPublic: isPublic,
       driver: FileDriver.LOCAL,
+      category: category,
     });
     return {
       file: createdFileEntry,
     };
+  }
+
+  async delete(fileId: string, requestingUser: User): Promise<void> {
+    const file = await this.fileRepository.findById(fileId);
+    if (!file) {
+      throw new NotFoundException('File not found.');
+    }
+    const isAdmin = requestingUser.role?.id === RoleEnum.admin;
+    const isOwner = file.ownerId === requestingUser.id;
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException(
+        'You do not have permission to delete this file.',
+      );
+    }
+    try {
+      await fs.unlink(file.path);
+    } catch (error) {
+      console.error(`Error deleting file from filesystem: ${file.path}`, error);
+    }
+    await this.fileRepository.remove(fileId);
   }
 
   async getFileStream(
@@ -58,32 +81,26 @@ export class FilesLocalService {
     fileName: string;
   }> {
     const fileMetadata = await this.fileRepository.findById(fileId);
-
     if (!fileMetadata) {
-      throw new NotFoundException('File not found.');
+      throw new NotFoundException('File not found in database.');
     }
-
     const isAdmin = requestingUser.role?.id === RoleEnum.admin;
     const isOwner = fileMetadata.ownerId === requestingUser.id;
-
     if (!fileMetadata.isPublic && !isOwner && !isAdmin) {
       throw new ForbiddenException(
         'You do not have permission to access this file.',
       );
     }
-
     const filePath = fileMetadata.path;
     try {
-      await fs.promises.access(filePath, fs.constants.F_OK);
+      await fs.access(filePath);
     } catch (error) {
       console.error(`File not found on filesystem: ${filePath}`, error);
       throw new NotFoundException('File not found on storage.');
     }
-
-    const stream = fs.createReadStream(filePath);
+    const stream = createReadStream(filePath);
     const contentType = mime.lookup(filePath) || 'application/octet-stream';
     const fileName = path.basename(filePath);
-
     return {
       stream: new StreamableFile(stream),
       contentType,

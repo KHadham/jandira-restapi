@@ -224,9 +224,17 @@ export class UsersService {
   async update(
     id: User['id'],
     updateUserDto: UpdateUserDto,
+    requestingUser?: User, // <--- ADD the user making the request
   ): Promise<User | null> {
     // Do not remove comment below.
     // <updating-property />
+
+    const isAdmin = requestingUser?.role?.id === RoleEnum.admin;
+    const isOwner = requestingUser?.id === id;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException();
+    }
 
     let password: string | undefined = undefined;
 
@@ -371,7 +379,14 @@ export class UsersService {
     return updatedUser;
   }
 
-  async remove(id: User['id']): Promise<void> {
+  async remove(id: User['id'], requestingUser?: User): Promise<void> {
+    const isAdmin = requestingUser?.role?.id === RoleEnum.admin;
+    const isOwner = requestingUser?.id === id;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException();
+    }
+
     await this.usersRepository.remove(id);
   }
 }

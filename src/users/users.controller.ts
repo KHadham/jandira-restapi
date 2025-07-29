@@ -36,6 +36,7 @@ import { User } from './domain/user';
 import { UsersService } from './users.service';
 import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
+import { request } from 'http';
 
 @ApiBearerAuth()
 // @Roles(RoleEnum.admin)
@@ -109,14 +110,8 @@ export class UsersController {
     return this.usersService.findById(id, request.user);
   }
 
-  @ApiOkResponse({
-    type: User,
-  })
-  @Roles(RoleEnum.admin) // <--- Keep this endpoint admin-only
-  @UseGuards(RolesGuard)
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @ApiOkResponse({ type: User })
+  @SerializeOptions({ groups: ['me', 'admin'] })
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({
@@ -127,8 +122,9 @@ export class UsersController {
   update(
     @Param('id') id: User['id'],
     @Body() updateProfileDto: UpdateUserDto,
+    @Req() request: { user: User }, // <--- Get the logged-in user from the request
   ): Promise<User | null> {
-    return this.usersService.update(id, updateProfileDto);
+    return this.usersService.update(id, updateProfileDto, request.user);
   }
 
   @Delete(':id')
@@ -138,7 +134,10 @@ export class UsersController {
     required: true,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: User['id']): Promise<void> {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id') id: User['id'],
+    @Req() request: { user: User },
+  ): Promise<void> {
+    return this.usersService.remove(id, request.user);
   }
 }

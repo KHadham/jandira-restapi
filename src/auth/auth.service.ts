@@ -149,14 +149,21 @@ export class AuthService {
       console.error('FONTEE_TOKEN is not set in environment variables.');
       throw new Error('OTP sending service is not configured.');
     }
-    const message = `Your verification code is: ${otp}. Do not share it with anyone.`;
+    const message = `Kode verifikasi Anda: ${otp}. Jangan di bagiin ke siapa-siapa ya 🤫 \n> _#jangandirumahaja_ `;
 
     try {
       console.log(`Sending OTP ${otp} to ${phone} via WhatsApp (Fonnte)`);
       // Ensure you have axios installed (npm install axios) or use another HTTP client
-      const response = await axios.get(
-        `https://api.fonnte.com/send?token=${fonnteToken}&target=${phone}&message=${message}`,
+      const response = await axios.post(
+        `https://services.mitratechindonesia.co.id/api-wa/send-message/41747b63-5f91-4c2c-8c82-1f9985097a6c`,
+
+        {
+          number: phone,
+          message: message,
+        },
+        // `https://api.fonnte.com/send?token=${fonnteToken}&target=${phone}&message=${message}`,
       );
+
       console.log('Fonnte API response:', response.data);
       if (response.data.status === false) {
         // Check Fonnte's specific error response

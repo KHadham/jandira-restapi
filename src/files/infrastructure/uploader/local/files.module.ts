@@ -9,17 +9,18 @@ import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
-
 import { FilesLocalService } from './files.service';
 import { RelationalFilePersistenceModule } from '../../persistence/relational/relational-persistence.module';
 import { AllConfigType } from '../../../../config/config.type';
 import { UsersModule } from '../../../../users/users.module';
+import { FilesModule } from '../../../files.module';
 
 const infrastructurePersistenceModule = RelationalFilePersistenceModule;
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
+    forwardRef(() => FilesModule),
     infrastructurePersistenceModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
@@ -27,18 +28,16 @@ const infrastructurePersistenceModule = RelationalFilePersistenceModule;
       useFactory: (configService: ConfigService<AllConfigType>) => {
         return {
           fileFilter: (request, file, callback) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!allowedMimeTypes.includes(file.mimetype)) {
               return callback(
                 new UnprocessableEntityException({
                   status: HttpStatus.UNPROCESSABLE_ENTITY,
-                  errors: {
-                    file: `cantUploadFileType`,
-                  },
+                  errors: { file: `cantUploadFileType` },
                 }),
                 false,
               );
             }
-
             callback(null, true);
           },
           storage: diskStorage({
