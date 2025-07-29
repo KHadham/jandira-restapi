@@ -54,7 +54,7 @@ export class UserEntity extends EntityRelationalHelper {
 
   // <--- ADD address column --->
   @Column({ type: 'text', nullable: true })
-  address: string | null;
+  address?: string | null;
 
   @OneToOne(() => FileEntity, {
     eager: false, // <--- This is the key

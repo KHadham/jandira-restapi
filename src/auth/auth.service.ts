@@ -727,13 +727,10 @@ export class AuthService {
     userDto: AuthUpdateDto,
   ): Promise<NullableType<User>> {
     const currentUser = await this.usersService.findById(userJwtPayload.id);
-
     if (!currentUser) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          user: 'userNotFound',
-        },
+        errors: { user: 'userNotFound' },
       });
     }
 
@@ -814,9 +811,17 @@ export class AuthService {
     delete userDto.email;
     delete userDto.oldPassword;
 
-    await this.usersService.update(userJwtPayload.id, userDto);
+    // --- THIS IS THE FIX ---
+    // At the end of the method, call usersService.update and pass the
+    // 'currentUser' object you fetched at the beginning.
+    const updatedUser = await this.usersService.update(
+      userJwtPayload.id,
+      userDto,
+      currentUser,
+    );
+    // --- END OF FIX ---
 
-    return this.usersService.findById(userJwtPayload.id);
+    return updatedUser;
   }
 
   async refreshToken(

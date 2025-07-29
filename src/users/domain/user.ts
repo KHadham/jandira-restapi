@@ -63,7 +63,7 @@ export class User {
 
   @ApiPropertyOptional({ example: '123 Travel St, Wanderlust City, World' })
   @Expose({ groups: ['me', 'admin'] }) // Add this line
-  address?: string | null;
+  address?: string | null | undefined;
 
   @ApiPropertyOptional({ type: () => FileType })
   @Expose({ groups: ['me', 'admin'] }) // Add this line

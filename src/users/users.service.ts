@@ -176,27 +176,20 @@ export class UsersService {
     });
   }
 
-  async findById(
-    id: User['id'],
-    requestingUser?: User, // Make requestingUser optional for internal calls
-  ): Promise<NullableType<User>> {
+  async findById(id: User['id'], requestingUser?: User) {
+    // Make optional
     const user = await this.usersRepository.findById(id);
-
     if (!user) {
       return null;
     }
 
-    // If a requestingUser is provided, check permissions
     if (requestingUser) {
-      const isAdmin = requestingUser.role?.id === RoleEnum.admin;
+      // Permission check only runs if provided
       const isOwner = requestingUser.id === user.id;
-
-      // Allow if user is an admin OR is the owner of the profile
-      if (!isAdmin && !isOwner) {
+      if (!isOwner) {
         throw new ForbiddenException();
       }
     }
-    console.log('requestingUser.role?.id >>>>>>', requestingUser);
     return user;
   }
 
@@ -224,16 +217,13 @@ export class UsersService {
   async update(
     id: User['id'],
     updateUserDto: UpdateUserDto,
-    requestingUser?: User, // <--- ADD the user making the request
-  ): Promise<User | null> {
-    // Do not remove comment below.
-    // <updating-property />
-
-    const isAdmin = requestingUser?.role?.id === RoleEnum.admin;
-    const isOwner = requestingUser?.id === id;
-
-    if (!isAdmin && !isOwner) {
-      throw new ForbiddenException();
+    requestingUser?: User,
+  ) {
+    if (requestingUser) {
+      const isOwner = requestingUser.id === id;
+      if (!isOwner) {
+        throw new ForbiddenException();
+      }
     }
 
     let password: string | undefined = undefined;
@@ -348,7 +338,6 @@ export class UsersService {
     if (updateUserDto.firstName !== undefined)
       payloadToUpdate.firstName = updateUserDto.firstName;
     if (updateUserDto.address !== undefined)
-      // This line should exist from our last step
       payloadToUpdate.address = updateUserDto.address;
     if (updateUserDto.lastName !== undefined)
       payloadToUpdate.lastName = updateUserDto.lastName;
@@ -356,11 +345,9 @@ export class UsersService {
     if (password !== undefined) payloadToUpdate.password = password;
     if (photo !== undefined) payloadToUpdate.photo = photo;
 
-    // --- THIS IS THE FIX ---
     if (identityPhoto !== undefined) {
       payloadToUpdate.identityPhoto = identityPhoto;
     }
-    // --- END OF FIX ---
 
     if (role !== undefined) payloadToUpdate.role = role;
     if (status !== undefined) payloadToUpdate.status = status;
@@ -369,10 +356,9 @@ export class UsersService {
     if (updateUserDto.socialId !== undefined)
       payloadToUpdate.socialId = updateUserDto.socialId;
 
-    console.log('payloadToUpdate >>>>>', payloadToUpdate);
     await this.usersRepository.update(id, payloadToUpdate);
-
     const updatedUser = await this.usersRepository.findById(id);
+
     if (!updatedUser) {
       throw new NotFoundException(`User with ID ${id} not found after update.`);
     }
@@ -380,11 +366,12 @@ export class UsersService {
   }
 
   async remove(id: User['id'], requestingUser?: User): Promise<void> {
-    const isAdmin = requestingUser?.role?.id === RoleEnum.admin;
-    const isOwner = requestingUser?.id === id;
-
-    if (!isAdmin && !isOwner) {
-      throw new ForbiddenException();
+    if (requestingUser) {
+      // Permission check only runs if provided
+      const isOwner = requestingUser.id === id;
+      if (!isOwner) {
+        throw new ForbiddenException();
+      }
     }
 
     await this.usersRepository.remove(id);

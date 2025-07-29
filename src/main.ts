@@ -32,7 +32,14 @@ async function bootstrap() {
   app.enableVersioning({
     type: VersioningType.URI,
   });
-  app.useGlobalPipes(new ValidationPipe(validationOptions));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      ...validationOptions,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
   app.useGlobalInterceptors(
     // ResolvePromisesInterceptor is used to resolve promises in responses because class-transformer can't do it
     // https://github.com/typestack/class-transformer/issues/549

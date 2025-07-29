@@ -36,11 +36,10 @@ import { User } from './domain/user';
 import { UsersService } from './users.service';
 import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
-import { request } from 'http';
 
 @ApiBearerAuth()
-// @Roles(RoleEnum.admin)
-@UseGuards(AuthGuard('jwt'))
+@Roles(RoleEnum.admin)
+@UseGuards(AuthGuard('jwt'), RolesGuard) // Reverted to class level
 @ApiTags('Users')
 @Controller({
   path: 'users',
@@ -98,31 +97,25 @@ export class UsersController {
   }
 
   @ApiOkResponse({ type: User })
-  @SerializeOptions({ groups: ['admin'] })
-  @Get(':id') // <--- This endpoint is now open to all authenticated users
+  @SerializeOptions({ groups: ['me', 'admin'] })
+  @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({ name: 'id', type: String, required: true })
   findOne(
     @Param('id') id: User['id'],
-    @Req() request: { user: User }, // <--- Get the authenticated user
+    @Req() request: { user: User },
   ): Promise<NullableType<User>> {
-    // We will pass the requesting user to the service for permission check
     return this.usersService.findById(id, request.user);
   }
 
-  @ApiOkResponse({ type: User })
   @SerializeOptions({ groups: ['me', 'admin'] })
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiParam({
-    name: 'id',
-    type: String,
-    required: true,
-  })
+  @ApiParam({ name: 'id', type: String, required: true })
   update(
     @Param('id') id: User['id'],
     @Body() updateProfileDto: UpdateUserDto,
-    @Req() request: { user: User }, // <--- Get the logged-in user from the request
+    @Req() request: { user: User }, // Pass the authenticated user
   ): Promise<User | null> {
     return this.usersService.update(id, updateProfileDto, request.user);
   }

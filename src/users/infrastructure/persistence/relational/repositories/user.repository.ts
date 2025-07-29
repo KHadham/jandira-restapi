@@ -143,9 +143,16 @@ export class UsersRelationalRepository implements UserRepository {
   }
 
   async update(id: User['id'], payload: Partial<User>): Promise<User> {
-    const entity = await this.usersRepository.findOne({
-      where: { id: Number(id) },
-    });
+    // --- CORRECTED LOGIC START ---
+    // Use the QueryBuilder to find the entity and explicitly join all relations,
+    // ensuring we get the complete user object before merging.
+    const entity = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id: Number(id) })
+      .leftJoinAndSelect('user.photo', 'photo')
+      .leftJoinAndSelect('user.identityPhoto', 'identityPhoto')
+      .getOne();
+    // --- CORRECTED LOGIC END ---
 
     if (!entity) {
       throw new Error('User not found');
