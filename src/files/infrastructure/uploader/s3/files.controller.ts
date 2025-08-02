@@ -50,7 +50,7 @@ export class FilesS3Controller {
     @UploadedFile() file: Express.MulterS3.File,
     @Req() req: { user: User },
   ): Promise<FileResponseDto> {
-    const userId = req.user.id as number;
+    const userId = req.user.id;
 
     return this.filesService.create(file, userId);
   }

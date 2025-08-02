@@ -50,7 +50,7 @@ export class FilesLocalService {
     const createdFileEntry = await this.fileRepository.create({
       path: file.path.replace(/\\/g, '/'), // Normalize path for consistency
       thumbnailPath: thumbnailPath, // Save thumbnail path
-      ownerId: Number(userId),
+      ownerId: userId,
       isPublic: isPublic,
       driver: FileDriver.LOCAL,
       category: category,

@@ -42,8 +42,8 @@ export class FileEntity extends EntityRelationalHelper {
   category: FileCategoryEnum;
   // <--- NEW COLUMNS --->
   @Index()
-  @Column({ type: Number, nullable: true }) // Assuming User ID is number. Nullable for now if some old files don't have owners.
-  ownerId?: number | null; // Or make it non-nullable for all new files
+  @Column({ type: 'uuid', nullable: true }) // <--- Change type to 'uuid'
+  ownerId?: string | null; // Or make it non-nullable for all new files
 
   @ManyToOne(() => UserEntity, {
     // Optional: Formal relation for referential integrity

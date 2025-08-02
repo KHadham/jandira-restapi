@@ -13,7 +13,7 @@ export class FilesS3Service {
 
   async create(
     file: Express.MulterS3.File,
-    userId: number,
+    userId: string,
   ): Promise<{ file: FileType }> {
     if (!file) {
       throw new UnprocessableEntityException({

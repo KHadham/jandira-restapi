@@ -71,7 +71,7 @@ export class FilesS3PresignedController {
     @Req() req: { user: User },
   ): Promise<{ file: FileType }> {
     // Return type no longer includes the signed URL
-    const userId = req.user.id as number;
+    const userId = req.user.id;
 
     return this.filesService.create(
       file,
@@ -120,7 +120,7 @@ export class FilesS3PresignedController {
     @UploadedFile() file: Express.MulterS3.File,
     @Req() req: { user: User },
   ): Promise<FileType> {
-    const userId = req.user.id as number;
+    const userId = req.user.id;
     const user = await this.usersService.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found.');
@@ -187,7 +187,7 @@ export class FilesS3PresignedController {
     @UploadedFile() file: Express.MulterS3.File,
     @Req() req: { user: User },
   ): Promise<FileType> {
-    const userId = req.user.id as number;
+    const userId = req.user.id;
 
     const user = await this.usersService.findById(userId);
     if (!user) {
@@ -227,7 +227,7 @@ export class FilesS3PresignedController {
   @UseGuards(AuthGuard('jwt'))
   @Get('users/:id') // Your proposed route
   async findUserFiles(
-    @Param('id') targetUserId: number, // ID of the user whose files we want to see
+    @Param('id') targetUserId: string, // ID of the user whose files we want to see
     @Req() req: { user: User }, // The user making the request
     @Query() query: QueryUserDto,
   ): Promise<InfinityPaginationResponseDto<FileType>> {

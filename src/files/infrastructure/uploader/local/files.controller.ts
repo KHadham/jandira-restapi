@@ -202,7 +202,7 @@ export class FilesLocalController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async findUserFiles(
-    @Param('id') targetUserId: number,
+    @Param('id') targetUserId: string,
     @Req() req: { user: User },
     @Query() query: QueryUserDto,
   ): Promise<InfinityPaginationResponseDto<FileType>> {

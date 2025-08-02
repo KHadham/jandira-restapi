@@ -15,7 +15,7 @@ export abstract class FileRepository {
     paginationOptions,
     publicOnly, // <--- ADD this parameter
   }: {
-    ownerId: number;
+    ownerId: string;
     paginationOptions: IPaginationOptions;
     publicOnly: boolean; // <--- ADD this parameter
   }): Promise<[FileType[], number]>;

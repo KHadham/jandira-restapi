@@ -86,7 +86,7 @@ export class FilesS3PresignedService {
     }
     const fileEntity = await this.fileRepository.create({
       path: file.key,
-      ownerId: Number(userId),
+      ownerId: userId,
       isPublic: isPublic,
       driver: FileDriver.S3_PRESIGNED,
       category: category, // <--- SET category
@@ -135,7 +135,7 @@ export class FilesS3PresignedService {
     const publicOnly = requestingUser.id !== targetUserId;
 
     return this.fileRepository.findManyByOwnerIdWithPagination({
-      ownerId: Number(targetUserId),
+      ownerId: targetUserId,
       paginationOptions,
       publicOnly: publicOnly,
     });

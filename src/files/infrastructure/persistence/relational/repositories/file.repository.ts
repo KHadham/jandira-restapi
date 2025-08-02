@@ -92,7 +92,7 @@ export class FileRelationalRepository implements FileRepository {
     paginationOptions,
     publicOnly, // <--- Receive the new parameter
   }: {
-    ownerId: number;
+    ownerId: string;
     paginationOptions: IPaginationOptions;
     publicOnly: boolean;
   }): Promise<[FileType[], number]> {

@@ -41,7 +41,7 @@ export class FilesService {
     // --- REFACTOR END ---
 
     return this.fileRepository.findManyByOwnerIdWithPagination({
-      ownerId: Number(targetUserId),
+      ownerId: targetUserId,
       paginationOptions,
       publicOnly: publicOnly,
     });

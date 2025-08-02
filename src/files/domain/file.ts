@@ -61,7 +61,8 @@ export class FileType {
   driver?: FileDriver;
 
   @ApiPropertyOptional({
-    type: Number,
+    type: String, // <--- Change this
+    format: 'uuid', // <--- Add format
     description: 'ID of the user who owns the file',
   })
   ownerId?: User['id'] | null;

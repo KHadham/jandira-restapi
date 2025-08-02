@@ -22,7 +22,7 @@ export class FileMapper {
     file.path = domainEntity.path;
     file.thumbnailPath = domainEntity.thumbnailPath; // <--- ADD THIS LINE
     file.driver = domainEntity.driver as FileDriver;
-    file.ownerId = domainEntity.ownerId as number;
+    file.ownerId = domainEntity.ownerId;
     file.isPublic = domainEntity.isPublic;
     file.category = domainEntity.category ?? FileCategoryEnum.GENERAL;
     return file;
