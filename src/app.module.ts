@@ -26,6 +26,7 @@ import { RedisModule } from './redis/redis.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 // import { AdminModule } from './admin/admin.module';
+import { ImageService } from './image/image.service';
 // --- END OF ADD ---
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
@@ -104,6 +105,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    ImageService,
   ],
   // --- END OF ADD ---
 })

@@ -14,11 +14,13 @@ import { RelationalFilePersistenceModule } from '../../persistence/relational/re
 import { AllConfigType } from '../../../../config/config.type';
 import { UsersModule } from '../../../../users/users.module';
 import { FilesModule } from '../../../files.module';
+import { ImageModule } from '../../../../image/image.module';
 
 const infrastructurePersistenceModule = RelationalFilePersistenceModule;
 
 @Module({
   imports: [
+    ImageModule,
     forwardRef(() => UsersModule),
     forwardRef(() => FilesModule),
     infrastructurePersistenceModule,

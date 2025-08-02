@@ -65,7 +65,7 @@ export class FilesLocalController {
     return this.localFilesService.create(
       file,
       req.user.id,
-      false,
+      true,
       FileCategoryEnum.GENERAL,
     );
   }
@@ -163,6 +163,24 @@ export class FilesLocalController {
   ): Promise<StreamableFile> {
     const { stream, contentType, fileName } =
       await this.localFilesService.getFileStream(fileId, req.user);
+    response.setHeader('Content-Type', contentType);
+    response.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    return stream;
+  }
+
+  @ApiOkResponse({
+    description: 'Streams the requested thumbnail if authorized.',
+  })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @Get('view/:fileId/thumbnail')
+  async viewThumbnail(
+    @Param('fileId') fileId: string,
+    @Req() req: { user: User },
+    @Res({ passthrough: true }) response: ExpressResponse,
+  ): Promise<StreamableFile> {
+    const { stream, contentType, fileName } =
+      await this.localFilesService.getFileStream(fileId, req.user, true); // Pass true for thumbnail
     response.setHeader('Content-Type', contentType);
     response.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
     return stream;

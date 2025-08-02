@@ -18,12 +18,14 @@ import { User } from '../../../../users/domain/user';
 import { RoleEnum } from '../../../../roles/roles.enum';
 import { FileDriver } from '../../../config/file-config.type';
 import { FileCategoryEnum } from 'src/files/domain/file-category.enum';
+import { ImageService } from '../../../../image/image.service';
 
 @Injectable()
 export class FilesLocalService {
   constructor(
     private readonly configService: ConfigService<AllConfigType>,
     private readonly fileRepository: FileRepository,
+    private readonly imageService: ImageService, // Inject ImageService
   ) {}
 
   async create(
@@ -40,8 +42,14 @@ export class FilesLocalService {
         },
       });
     }
+    // Generate thumbnail if the file is an image
+    let thumbnailPath: string | null = null;
+    if (file.mimetype.startsWith('image/')) {
+      thumbnailPath = await this.imageService.createThumbnail(file.path);
+    }
     const createdFileEntry = await this.fileRepository.create({
       path: file.path.replace(/\\/g, '/'), // Normalize path for consistency
+      thumbnailPath: thumbnailPath, // Save thumbnail path
       ownerId: Number(userId),
       isPublic: isPublic,
       driver: FileDriver.LOCAL,
@@ -69,12 +77,21 @@ export class FilesLocalService {
     } catch (error) {
       console.error(`Error deleting file from filesystem: ${file.path}`, error);
     }
+
+    if (file.thumbnailPath) {
+      try {
+        await fs.unlink(file.thumbnailPath);
+      } catch (error) {
+        console.error(`Error deleting thumbnail: ${file.thumbnailPath}`, error);
+      }
+    }
     await this.fileRepository.remove(fileId);
   }
 
   async getFileStream(
     fileId: FileType['id'],
     requestingUser: User,
+    isThumbnail: boolean = false, // <--- ADD this optional flag
   ): Promise<{
     stream: StreamableFile;
     contentType: string;
@@ -91,7 +108,15 @@ export class FilesLocalService {
         'You do not have permission to access this file.',
       );
     }
-    const filePath = fileMetadata.path;
+    const filePath = isThumbnail
+      ? fileMetadata.thumbnailPath
+      : fileMetadata.path;
+
+    if (!filePath) {
+      throw new NotFoundException(
+        isThumbnail ? 'Thumbnail not found.' : 'File not found on storage.',
+      );
+    }
     try {
       await fs.access(filePath);
     } catch (error) {

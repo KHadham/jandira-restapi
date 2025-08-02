@@ -5,25 +5,26 @@ import { FileEntity } from '../entities/file.entity';
 
 export class FileMapper {
   static toDomain(raw: FileEntity): FileType {
-    const domainEntity = new FileType();
-    domainEntity.id = raw.id;
-    domainEntity.path = raw.path;
-    domainEntity.driver = raw.driver;
-    domainEntity.ownerId = raw.ownerId;
-    domainEntity.isPublic = raw.isPublic;
-    domainEntity.category = raw.category; // Ensure category is mapped if needed
-    return domainEntity;
+    const file = new FileType();
+    file.id = raw.id;
+    file.path = raw.path;
+    file.thumbnailPath = raw.thumbnailPath; // <--- ADD THIS LINE
+    file.driver = raw.driver;
+    file.ownerId = raw.ownerId;
+    file.isPublic = raw.isPublic;
+    file.category = raw.category;
+    return file;
   }
 
   static toPersistence(domainEntity: FileType): FileEntity {
-    const persistenceEntity = new FileEntity();
-    persistenceEntity.id = domainEntity.id;
-    persistenceEntity.path = domainEntity.path;
-    persistenceEntity.driver = domainEntity.driver as FileDriver; // Handle optional driver
-    persistenceEntity.ownerId = domainEntity.ownerId as number;
-    persistenceEntity.isPublic = domainEntity.isPublic;
-    persistenceEntity.category =
-      domainEntity.category ?? FileCategoryEnum.GENERAL; // Default to LOCAL if not specified
-    return persistenceEntity;
+    const file = new FileEntity();
+    file.id = domainEntity.id;
+    file.path = domainEntity.path;
+    file.thumbnailPath = domainEntity.thumbnailPath; // <--- ADD THIS LINE
+    file.driver = domainEntity.driver as FileDriver;
+    file.ownerId = domainEntity.ownerId as number;
+    file.isPublic = domainEntity.isPublic;
+    file.category = domainEntity.category ?? FileCategoryEnum.GENERAL;
+    return file;
   }
 }

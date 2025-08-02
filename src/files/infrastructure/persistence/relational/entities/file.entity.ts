@@ -24,6 +24,9 @@ export class FileEntity extends EntityRelationalHelper {
   @Column()
   path: string;
 
+  @Column({ type: String, nullable: true }) // <--- ADD THIS LINE
+  thumbnailPath?: string | null; // <--- ADD THIS LINE
+
   @Column({
     type: 'enum',
     enum: FileDriver,

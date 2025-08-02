@@ -78,4 +78,16 @@ export class FileType {
     description: 'Is the file publicly accessible?',
   })
   isPublic: boolean;
+
+  @ApiPropertyOptional({ type: String, example: '...' })
+  @Transform(
+    ({ value }) => {
+      if ((fileConfig() as FileConfig).driver === FileDriver.LOCAL) {
+        return value;
+      }
+      return value;
+    },
+    { toPlainOnly: true },
+  )
+  thumbnailPath?: string | null;
 }
