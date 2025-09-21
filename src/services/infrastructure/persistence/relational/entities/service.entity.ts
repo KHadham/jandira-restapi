@@ -5,6 +5,7 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  DeleteDateColumn, // <-- Import this
 } from 'typeorm';
 import { TripDetails } from './trip-details.entity';
 import { EntityRelationalHelper } from 'src/utils/relational-entity-helper';
@@ -48,4 +49,7 @@ export class Service extends EntityRelationalHelper {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn() // <-- Add this column
+  deletedAt: Date;
 }

@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Service } from './infrastructure/persistence/relational/entities/service.entity';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { TripDetails } from './infrastructure/persistence/relational/entities/trip-details.entity';
 import { QueryServiceDto } from './dto/query-service.dto';
 import { ServiceSummaryDto } from './dto/service-summary.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Injectable()
 export class ServicesService {
@@ -73,5 +74,45 @@ export class ServicesService {
     }
 
     return service;
+  }
+
+  async update(
+    id: string,
+    updateServiceDto: UpdateServiceDto,
+  ): Promise<Service> {
+    // Step 1: Load the existing service WITH its relations
+    const existingService = await this.serviceRepository.findOne({
+      where: { id },
+      relations: {
+        tripDetails: true,
+      },
+    });
+
+    if (!existingService) {
+      throw new NotFoundException(`Service with id #${id} not found.`);
+    }
+
+    // Step 2: Separate the main DTO from the nested details DTO
+    const { tripDetails: tripDetailsDto, ...mainServiceData } =
+      updateServiceDto;
+
+    // Step 3: Update the top-level properties (title, price, etc.)
+    Object.assign(existingService, mainServiceData);
+
+    // Step 4: CRITICAL - Only update tripDetails if they were actually provided in the payload
+    if (tripDetailsDto && existingService.tripDetails) {
+      Object.assign(existingService.tripDetails, tripDetailsDto);
+    }
+
+    // Step 5: Save the updated entity. TypeORM will figure out what changed.
+    return this.serviceRepository.save(existingService);
+  }
+
+  async softDelete(id: string): Promise<void> {
+    const result = await this.serviceRepository.softDelete(id);
+
+    if (!result.affected) {
+      throw new NotFoundException(`Service with id #${id} not found.`);
+    }
   }
 }

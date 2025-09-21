@@ -28,6 +28,7 @@ import { APP_GUARD } from '@nestjs/core';
 // import { AdminModule } from './admin/admin.module';
 import { ImageService } from './image/image.service';
 import { ServicesModule } from './services/services.module';
+import { BookingsModule } from './bookings/bookings.module';
 // --- END OF ADD ---
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
@@ -99,6 +100,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     HomeModule,
     RedisModule,
     ServicesModule,
+    BookingsModule,
     // AdminModule,
   ],
   // --- ADD: Register the ThrottlerGuard as a global guard ---
