@@ -39,10 +39,11 @@ export default registerAs<RedisConfig>('redis', (): RedisConfig => {
 
   return {
     uri: process.env.REDIS_URI as string,
-    otpExpiresInSeconds: parseInt(
-      process.env.OTP_EXPIRES_IN_SECONDS as string,
-      10,
-    ),
+    otpExpiresInSeconds: 300,
+    // otpExpiresInSeconds: parseInt(
+    //   process.env.OTP_EXPIRES_IN_SECONDS as string,
+    //   10,
+    // ),
     otpLength: parseInt(process.env.OTP_LENGTH as string, 10) as number,
     otpCooldownSeconds: parseInt(
       process.env.OTP_COOLDOWN_SECONDS as string,

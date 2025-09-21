@@ -79,7 +79,7 @@ export class UsersRelationalRepository implements UserRepository {
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
 
     queryBuilder
-      .where('user.id = :id', { id: Number(id) })
+      .where('user.id = :id', { id: id })
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.status', 'status')
       .leftJoinAndSelect('user.photo', 'photo')

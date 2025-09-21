@@ -463,6 +463,7 @@ export class AuthService {
   }
 
   private async generateTokens(user: User): Promise<LoginResponseDto> {
+    console.log(' >>>>>>>>>>>>>> generateTokens');
     const [token, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         {
@@ -523,10 +524,16 @@ export class AuthService {
         status: { id: StatusEnum.active } as any, // Set as active immediately
       });
     } else {
+      console.log(' >>>>>>>>>>>>>> A');
       // User should already exist - find them
       try {
+        console.log(' >>>>>>>>>>>>>> B');
+
         user = await this.usersService.findByPhone(phone);
+        console.log(' >>>>>>>>>>>>>> C');
       } catch (error) {
+        console.log(' >>>>>>>>>>>>>> D');
+
         // This shouldn't happen if the logic is correct, but handle it
         console.error('Error finding user after OTP verify:', error);
         throw new UnprocessableEntityException(
@@ -534,7 +541,7 @@ export class AuthService {
         );
       }
     }
-
+    console.log(' >>>>>>>>>>>>>> E');
     if (!user) {
       throw new UnprocessableEntityException(
         'User could not be found or created.',
@@ -542,12 +549,14 @@ export class AuthService {
     }
 
     const fullUser = await this.usersService.findById(user.id);
-
+    console.log(' >>>>>>>>>>>>>> F');
     if (!fullUser) {
       // This should not happen if the user was just found/created, but it's a good safeguard.
       throw new UnprocessableEntityException(
         'Could not retrieve full user profile after login.',
       );
+    } else {
+      console.log('>>>>>>>>>>>>>> G ');
     }
 
     // Generate and return JWTs
