@@ -44,6 +44,9 @@ export class Booking extends EntityRelationalHelper {
   @Column({ type: 'int' })
   totalPrice: number; // Final price after calculations/discounts
 
+  @Column({ type: 'int', default: 0 }) // <-- Add this column
+  balanceDue: number;
+
   @OneToMany(() => Attendee, (attendee) => attendee.booking, {
     cascade: true, // <-- This is important! It will auto-save attendees
     eager: true, // <-- Eagerly load attendees with the booking

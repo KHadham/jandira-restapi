@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { BookingStatusEnum } from '../infrastructure/persistence/relational/entities/booking.entity';
 import { ServiceSummaryDto } from '../../services/dto/service-summary.dto';
 
-
 export class BookingSummaryDto {
   @ApiProperty()
   id: string;
