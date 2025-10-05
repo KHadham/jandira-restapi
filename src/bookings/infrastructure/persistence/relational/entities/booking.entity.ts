@@ -2,8 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -11,6 +13,8 @@ import { EntityRelationalHelper } from 'src/utils/relational-entity-helper';
 import { Service } from 'src/services/infrastructure/persistence/relational/entities/service.entity';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { Attendee } from './attendee.entity';
+import { Schedule } from '../../../../../services/infrastructure/persistence/relational/entities/schedule.entity';
+import { FileEntity } from '../../../../../files/infrastructure/persistence/relational/entities/file.entity';
 
 export enum BookingStatusEnum {
   PENDING_PAYMENT = 'PENDING_PAYMENT',
@@ -24,6 +28,10 @@ export class Booking extends EntityRelationalHelper {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @OneToOne(() => FileEntity, { eager: true, nullable: true }) // <-- Add this relationship
+  @JoinColumn() // <-- Add this decorator
+  paymentProof?: FileEntity | null;
+
   // AND CHANGE THESE TWO LINES:
   @ManyToOne(() => UserEntity, { eager: true })
   user: UserEntity;
@@ -31,8 +39,8 @@ export class Booking extends EntityRelationalHelper {
   @ManyToOne(() => Service, { eager: true })
   service: Service;
 
-  @Column({ type: 'date' })
-  bookingDate: Date; // The date the trip/service will take place
+  @ManyToOne(() => Schedule, { eager: true }) // <-- ADD THIS RELATION
+  schedule: Schedule;
 
   @Column({
     type: 'enum',

@@ -8,7 +8,9 @@ import {
   Post,
   Query,
   Request,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -16,7 +18,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingDto } from './dto/query-booking.dto';
 import { UpdateAttendeesDto } from './dto/update-attendees.dto';
-import { UpdateBookingDateDto } from './dto/update-booking-date.dto';
+import { RoleEnum } from '../roles/roles.enum';
+import { Roles } from '../roles/roles.decorator';
+import { RolesGuard } from '../roles/roles.guard';
+import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Bookings')
 @ApiBearerAuth()
@@ -24,6 +30,17 @@ import { UpdateBookingDateDto } from './dto/update-booking-date.dto';
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
+
+  @Post(':id/upload-proof')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload a payment proof for a booking' })
+  uploadPaymentProof(
+    @Request() request,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.bookingsService.uploadPaymentProof(id, file, request.user);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get a list of bookings' })
@@ -63,17 +80,41 @@ export class BookingsController {
     );
   }
 
-  @Patch(':id/date')
-  @ApiOperation({ summary: 'Change the date of a booking' })
-  updateDate(
+  // @Patch(':id/date')
+  // @ApiOperation({ summary: 'Change the date of a booking' })
+  // updateDate(
+  //   @Request() request,
+  //   @Param('id', new ParseUUIDPipe()) id: string,
+  //   @Body() updateBookingDateDto: UpdateBookingDateDto,
+  // ) {
+  //   return this.bookingsService.updateDate(
+  //     id,
+  //     updateBookingDateDto,
+  //     request.user,
+  //   );
+  // }
+
+  @Patch(':id/status')
+  @Roles(RoleEnum.admin) // <-- Specify that only admins are allowed
+  @UseGuards(RolesGuard) // <-- Apply the RolesGuard to enforce the rule
+  @ApiOperation({ summary: 'Update the status of a booking (Admin only)' })
+  updateStatus(
     @Request() request,
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() updateBookingDateDto: UpdateBookingDateDto,
+    @Body() updateBookingStatusDto: UpdateBookingStatusDto,
   ) {
-    return this.bookingsService.updateDate(
+    return this.bookingsService.updateStatus(
       id,
-      updateBookingDateDto,
+      updateBookingStatusDto,
       request.user,
     );
+  }
+
+  @Get('attended')
+  @ApiOperation({
+    summary: 'Get a list of bookings the user is an attendee for',
+  })
+  findAttended(@Request() request) {
+    return this.bookingsService.findAttendedByUser(request.user);
   }
 }

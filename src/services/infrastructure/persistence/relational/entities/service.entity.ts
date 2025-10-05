@@ -5,10 +5,12 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  DeleteDateColumn, // <-- Import this
+  DeleteDateColumn,
+  OneToMany, // <-- Import this
 } from 'typeorm';
 import { TripDetails } from './trip-details.entity';
 import { EntityRelationalHelper } from 'src/utils/relational-entity-helper';
+import { Schedule } from './schedule.entity';
 
 export enum ServiceTypeEnum {
   TRIP = 'TRIP',
@@ -39,10 +41,18 @@ export class Service extends EntityRelationalHelper {
   })
   serviceType: ServiceTypeEnum;
 
+  @Column({ type: 'boolean', default: true }) // <-- Add this column
+  isBookable: boolean; // Master on/off switch for the whole service
+
   @OneToOne(() => TripDetails, (details) => details.service, {
-    cascade: true, // Automatically save/update/delete details when service is changed
+    cascade: true,
   })
   tripDetails?: TripDetails;
+
+  @OneToMany(() => Schedule, (schedule) => schedule.service, {
+    cascade: true,
+  })
+  schedules: Schedule[];
 
   @CreateDateColumn()
   createdAt: Date;

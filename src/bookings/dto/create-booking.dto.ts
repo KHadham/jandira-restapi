@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsDate,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -33,16 +32,13 @@ class AttendeeDto {
 }
 
 export class CreateBookingDto {
-  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef' })
+  @ApiProperty({
+    description: 'The UUID of the specific schedule being booked',
+    example: 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+  })
   @IsNotEmpty()
   @IsUUID()
-  serviceId: string;
-
-  @ApiProperty({ example: '2025-12-25' })
-  @IsNotEmpty()
-  @Transform(({ value }) => new Date(value))
-  @IsDate()
-  bookingDate: Date;
+  scheduleId: string;
 
   @ApiProperty({ type: [AttendeeDto] })
   @IsArray()
